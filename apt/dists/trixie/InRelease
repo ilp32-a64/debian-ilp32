@@ -1,0 +1,35 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Architectures: arm64
+Codename: trixie
+Components: main
+Date: Tue, 10 Nov 2026 02:36:14 +0000
+Description: AArch64 ILP32 packages for Debian 13 (unofficial)
+Label: ILP32-A64
+Origin: ILP32-A64
+Suite: trixie
+MD5Sum:
+ 8ac2b2cebf152824b9e1a478639d7bb0            46062 main/binary-arm64/Packages
+ 0f10961e09027ac5c4ef19654a2b0be4            12350 main/binary-arm64/Packages.gz
+ 944926d67f1eb55e1696f8690f62a119            11024 main/binary-arm64/Packages.xz
+SHA1:
+ 73da4105908ac11cf3542fbea528f52c225975f1            46062 main/binary-arm64/Packages
+ dcdcfed80783cd500a29cf3fc736242147522ca7            12350 main/binary-arm64/Packages.gz
+ 5c827aab335c15798021a70759a20df03c2a9bae            11024 main/binary-arm64/Packages.xz
+SHA256:
+ d14504c0f8892196cd61b03b0fd0ca378340ae1867c3cc41818f50b56867b033            46062 main/binary-arm64/Packages
+ 3a941b1f9f7f2d0fffc4e05ac689a4fc8820ee0a6a652e239d0693de83bf8d66            12350 main/binary-arm64/Packages.gz
+ 3999f2e1efcf4741081ed7391761420d4bf553ec80a3e0894beadd4e59894f81            11024 main/binary-arm64/Packages.xz
+SHA512:
+ b51e9e41bc51a5d029dd1a28ebe5becf3438cae00d0a77a9ff1e58177a31cab2e9cbfc5c6d30fedfa07b72303172d859d7cf14f151b6c281e0b357ed979a1b64            46062 main/binary-arm64/Packages
+ ef9f56a7a85fb3bb89128d13f08839c8ec660f7b3c4b1eae426f21b9a81d30aa5f113aeb88a1381b637255135f43c259a0140ad0e693180dd958a1d303e169d8            12350 main/binary-arm64/Packages.gz
+ 19a723347794ef6ecb802dbf3946387f3d51656360c7ba18b8b91d03c898827b08d80645d51f465493edd0d57a9c45498251aa68d057f7c7c6405fb594801528            11024 main/binary-arm64/Packages.xz
+
+-----BEGIN PGP SIGNATURE-----
+
+iHUEARYKAB0WIQTVcjs0DL58mSCRgkOcal6EHiibIAUCavMHdQAKCRCcal6EHiib
+IN5hAP46S/ZIduFo/YTBJL9C0vU7uVrHr6FM/yYNXhUUlzVboAEAg8QkzovK7hiN
+npjsXtFWvee/JFLYGqf21tHXoVpSbQs=
+=acSA
+-----END PGP SIGNATURE-----
