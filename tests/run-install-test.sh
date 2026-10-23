@@ -32,6 +32,7 @@ sudo umount mnt
 "$HERE/qemu-boot.sh" test.img | tee install-test.log
 grep -a -E '^(===|RESULT)' install-test.log
 grep -aq ILP32-TEST-END install-test.log
-! grep -aq 'RESULT FAIL' install-test.log
+# (! grep would not stop the script: set -e ignores negated commands)
+if grep -aq 'RESULT FAIL' install-test.log; then echo "FAILED"; exit 1; fi
 echo "install test: all ok"
 "$HERE/scan-leaks.sh" "$DEBS"

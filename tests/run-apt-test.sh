@@ -77,5 +77,6 @@ sudo umount mnt
 "$HERE/qemu-boot.sh" apt-test.img | tee apt-test.log
 grep -a -E '^(===|RESULT)' apt-test.log
 grep -aq ILP32-TEST-END apt-test.log
-! grep -aq 'RESULT FAIL' apt-test.log
+# (! grep would not stop the script: set -e ignores negated commands)
+if grep -aq 'RESULT FAIL' apt-test.log; then echo "FAILED"; exit 1; fi
 echo "apt test: all ok"

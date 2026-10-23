@@ -60,5 +60,6 @@ echo "=== boot 2: UEFI -> GRUB -> installed kernel"
 EFI=1 "$HERE/qemu-boot.sh" kernel-test.img | tee kernel-test-2.log
 grep -a -E '^(===|RESULT)' kernel-test-1.log kernel-test-2.log
 grep -aq ILP32-TEST-END kernel-test-2.log
-! grep -aq 'RESULT FAIL' kernel-test-1.log kernel-test-2.log
+# (! grep would not stop the script: set -e ignores negated commands)
+if grep -aq 'RESULT FAIL' kernel-test-1.log kernel-test-2.log; then echo "FAILED"; exit 1; fi
 echo "kernel test: all ok"

@@ -74,5 +74,6 @@ trap - EXIT
 ROOT=/dev/vda2 "$HERE/qemu-boot.sh" upgrade-test.img | tee upgrade-test.log
 grep -a -E '^(===|RESULT|INFO)' upgrade-test.log
 grep -aq ILP32-TEST-END upgrade-test.log
-! grep -aq 'RESULT FAIL' upgrade-test.log
+# (! grep would not stop the script: set -e ignores negated commands)
+if grep -aq 'RESULT FAIL' upgrade-test.log; then echo "FAILED"; exit 1; fi
 echo "upgrade test: all ok"

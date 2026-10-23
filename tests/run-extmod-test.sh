@@ -1,10 +1,10 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
 # External module test of the kernel headers package (as DKMS uses it): install the kernel and
-# headers packages and Debian's gcc and make, boot the kernel through UEFI and GRUB, build a
-# small module against /lib/modules/<release>/build, load and unload it.
-#   boot 1  direct kernel boot (test kernel): dpkg -i kernel + headers, apt install gcc make
-#           from the Debian mirror (needs network)
+# headers packages (gcc and make come as their dependencies), boot the kernel through UEFI and
+# GRUB, build a small module against /lib/modules/<release>/build, load and unload it.
+#   boot 1  direct kernel boot (test kernel): apt install of the kernel and headers packages,
+#           which pulls in gcc and make from the Debian mirror (needs network)
 #   boot 2  UEFI -> GRUB -> installed kernel: build, insmod, rmmod
 # Needs sudo and an EFI base image from make-efi-image.sh.
 # Usage: run-extmod-test.sh <work dir with efi-base.img> <kernel debs dir>
@@ -43,5 +43,6 @@ echo "=== boot 2: build and load a module on the installed kernel"
 EFI=1 "$HERE/qemu-boot.sh" extmod-test.img | tee extmod-test-2.log
 grep -a -E '^(===|RESULT|INFO)' extmod-test-1.log extmod-test-2.log
 grep -aq ILP32-TEST-END extmod-test-2.log
-! grep -aq 'RESULT FAIL' extmod-test-1.log extmod-test-2.log
+# (! grep would not stop the script: set -e ignores negated commands)
+if grep -aq 'RESULT FAIL' extmod-test-1.log extmod-test-2.log; then echo "FAILED"; exit 1; fi
 echo "external module test: all ok"

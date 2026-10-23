@@ -9,7 +9,7 @@ check() { "$@"; local r=$?; if [ $r = 0 ]; then echo "RESULT ok: $*"; else echo 
 
 case $MODE in
 install)
-	step "E1 install kernel, headers, gcc and make"
+	step "E1 install kernel and headers (gcc and make come as dependencies)"
 	ip link set lo up
 	dev=$(ls /sys/class/net | grep -v lo | head -1)
 	ip link set "$dev" up && ip addr add 10.0.2.15/24 dev "$dev" && ip route add default via 10.0.2.2
@@ -17,8 +17,9 @@ install)
 	echo "deb $3 trixie main" > /etc/apt/sources.list
 	mount /boot/efi
 	check apt-get update -q
-	check apt-get install -y -q --no-install-recommends gcc make libc6-dev
-	check dpkg -i /ilp32-test/kdebs/*.deb
+	# apt installs the local packages and pulls in what linux-headers depends on (gcc, make, ...)
+	check apt-get install -y -q --no-install-recommends /ilp32-test/kdebs/*.deb
+	check command -v gcc make
 	check test -e "/lib/modules/$REL/build/Makefile"
 	umount /boot/efi
 	sed -i 's/guest-extmod-test.sh install/guest-extmod-test.sh boot/' /ilp32-test/test.sh
