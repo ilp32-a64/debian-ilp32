@@ -19,7 +19,8 @@ install)
 	check apt-get update -q
 	# apt installs the local packages and pulls in what linux-headers depends on (gcc, make, ...)
 	check apt-get install -y -q --no-install-recommends /ilp32-test/kdebs/*.deb
-	check command -v gcc make
+	check command -v aarch64-linux-gnu-gcc-14
+	check command -v make
 	check test -e "/lib/modules/$REL/build/Makefile"
 	umount /boot/efi
 	sed -i 's/guest-extmod-test.sh install/guest-extmod-test.sh boot/' /ilp32-test/test.sh
