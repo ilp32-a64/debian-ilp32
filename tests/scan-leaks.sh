@@ -10,13 +10,15 @@
 #                kept outside the repository, so that the patterns themselves stay private
 #                (default ~/.config/debian-ilp32/leak-patterns, or LEAK_PATTERNS)
 #
-# Upstream kernel content gets the build-leak patterns only; our own metadata and scripts get
-# all patterns. In linux-image-* and linux-headers-*, the kernel, modules, device trees, config,
-# headers and DEBIAN/md5sums (a generated list of upstream file names) are upstream content: it
-# carries upstream authors' email addresses, vendor and SoC names of upstream drivers, and
-# specification section numbers that look like 10.x.x.x addresses, all published upstream.
-# DEBIAN/control, changelog, copyright, maintainer scripts and /usr/share/doc are ours. Every
-# other package (runtime, keyring) is ours entirely. ALLOW_UPSTREAM lists exact exceptions.
+# Upstream content gets the build-leak patterns only; our own metadata and scripts get all
+# patterns. Upstream content is everything but our metadata in the kernel packages (linux-image-*,
+# linux-headers-*: kernel, modules, device trees, config, headers, DEBIAN/md5sums) and in the
+# toolchain packages (binutils, gcc, g++, libc6-dev and linux-libc-dev for ILP32: compilers,
+# headers, static libraries). It carries upstream authors' email addresses, vendor and SoC names
+# of upstream drivers, and specification section numbers that look like 10.x.x.x addresses, all
+# published upstream. DEBIAN/control, changelog, copyright, maintainer scripts and /usr/share/doc
+# are ours. Every other package (runtime, keyring, metapackages) is ours entirely.
+# ALLOW_UPSTREAM lists exact exceptions.
 #
 # Each package ends with "SCANNED <file>: <n> files, <n> hits"; the scan fails unless every
 # package was scanned.
@@ -78,7 +80,8 @@ for deb in "$DEBS"/*.deb; do
 	done < "$W/types"
 	find . -type f | sort > "$W/files"
 	case $name in
-	linux-image-* | linux-headers-*)
+	linux-image-*-ilp32-arm64 | linux-headers-*-ilp32-arm64 | linux-libc-dev-ilp32 | \
+		libc6-dev-ilp32 | binutils-*-ilp32 | gcc-*-ilp32 | g++-*-ilp32)
 		grep -E '^\./(DEBIAN/(control|changelog|copyright|conffiles|triggers|templates|config|preinst|postinst|prerm|postrm)|usr/share/doc/)' \
 			"$W/files" > "$W/own" || true
 		grep -v -x -F -f "$W/own" "$W/files" > "$W/upstream" || true
