@@ -26,6 +26,12 @@ rm -rf kt && mkdir -p kt/bin
 "$TC/bin/$T-gcc" -O2 -o kt/bin/hello-ilp32 "$HERE/hello.c"
 "$TC/bin/$T-g++" -O2 -o kt/bin/hello++-ilp32 "$HERE/hello++.cc"
 "$TC/bin/$T-gcc" -O2 -fopenmp -o kt/bin/runtime-test "$HERE/runtime-test.c" -lm -latomic
+# static: the check runs before the runtime packages are installed
+"$TC/bin/$T-gcc" -O2 -static -o kt/bin/vdso-check-ilp32 "$HERE/vdso-check.c"
+# AArch32 (static, so that no arm32 libraries are needed in the guest), if a compiler is there
+if command -v arm-linux-gnueabihf-gcc > /dev/null; then
+	arm-linux-gnueabihf-gcc -O2 -static -o kt/bin/vdso-check-aarch32 "$HERE/vdso-check.c"
+fi
 
 cp --sparse=always efi-base.img kernel-test.img
 mkdir -p mnt

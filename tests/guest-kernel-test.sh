@@ -40,6 +40,12 @@ boot)
 	else
 		echo "INFO: kernel without BTF"
 	fi
+	if grep -q "^CONFIG_SECURITY_PERF_EVENTS_RESTRICT=y" "/boot/config-$REL"; then
+		check test "$(cat /proc/sys/kernel/perf_event_paranoid)" = 3
+	fi
+	for v in /ilp32-test/bin/vdso-check-*; do
+		[ -x "$v" ] && check "$v"
+	done
 	if [ "$ILP32" = 1 ]; then
 		check grep -q '^CONFIG_ARM64_ILP32=y' "/boot/config-$REL"
 		/ilp32-test/guest-install-test.sh /ilp32-test/debs /ilp32-test/bin
