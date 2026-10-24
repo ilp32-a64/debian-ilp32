@@ -75,3 +75,13 @@ check $T-gcc-ar --version > /dev/null
 step "C8 search paths"
 $T-gcc -print-search-dirs | sed 's/^/INFO /' | cut -c1-200
 echo | $T-gcc -E -Wp,-v - 2>&1 | sed -n '/#include <...>/,/End of/p' | sed 's/^/INFO /'
+
+step "C9 defaults"
+inc=$(echo | $T-gcc -E -Wp,-v - 2>&1 | sed -n "/#include <...>/,/End of/p")
+if echo "$inc" | grep -qx " /usr/local/include"; then
+	echo "RESULT FAIL: /usr/local/include (LP64 headers) is in the ILP32 include search list"
+else
+	echo "RESULT ok: no /usr/local/include in the include search list"
+fi
+expect "build-id note" "Build ID" $T-readelf -n hello
+expect "GNU hash" "GNU_HASH" $T-readelf -d hello
