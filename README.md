@@ -40,7 +40,8 @@ Updates: `sudo apt update && sudo apt upgrade`. New kernel versions come as new 
 | Machine | Kernel | Status |
 |---|---|---|
 | UEFI with GRUB (servers, VMs, UEFI boards) | `linux-image-ilp32-arm64` | tested in QEMU |
-| Raspberry Pi 3 and 4 with Debian's `raspi-firmware` | `linux-image-ilp32-arm64` | should work, untested |
+| Raspberry Pi 3 Model B+ with Debian's `raspi-firmware` | `linux-image-ilp32-arm64` | tested on hardware |
+| Raspberry Pi 4 with Debian's `raspi-firmware` | `linux-image-ilp32-arm64` | should work, untested |
 | Boards that need a vendor kernel | the vendor kernel with the [ILP32 patches](https://github.com/ilp32-a64/linux-ilp32) | install `ilp32-runtime` only |
 
 ### About the kernel
