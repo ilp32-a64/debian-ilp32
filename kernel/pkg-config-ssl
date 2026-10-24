@@ -1,0 +1,17 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# HOSTPKG_CONFIG of build-deb.sh. bindeb-pkg rebuilds the host programs of linux-headers with the arm64
+# compiler (scripts/package/install-extmod-build: make HOSTCC=$CC KBUILD_EXTMOD=<headers dir> scripts/);
+# sign-file needs the arm64 libcrypto there: libssl-dev:arm64 of the chroot. For that build
+# (KBUILD_EXTMOD in MAKEFLAGS) give the pkg-config flags of the arm64 libcrypto. Everything else behaves
+# as without pkg-config (exit 127: Kbuild falls back to -lcrypto), so the build host's own host programs
+# do not change.
+case "$MAKEFLAGS" in
+*KBUILD_EXTMOD=*linux-headers-*) ;;
+*) exit 127 ;;
+esac
+case " $* " in
+*" libcrypto "*) ;;
+*) exit 127 ;;
+esac
+PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig exec pkg-config "$@"
