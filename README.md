@@ -46,7 +46,7 @@ Updates: `sudo apt update && sudo apt upgrade`. New kernel versions come as new 
 
 ### About the kernel
 
-- It is [linux-ilp32](https://github.com/ilp32-a64/linux-ilp32) `ilp32-6.12.y` (6.12 LTS, the same
+- It is [linux-ilp32](https://github.com/ilp32-a64/linux-ilp32) `ilp32-6.12.y` (6.12.114: commit `64b6f40074`; 6.12 LTS, the same
   series as Debian 13), built with Debian 13's configuration and compiler, plus the ILP32 ABI and
   Debian's `perf_event_paranoid` restriction. Drivers, firmware use and system settings stay as with
   Debian's kernel; 32-bit Arm (AArch32) programs keep running.
@@ -115,6 +115,7 @@ runtime/build-debs.sh          # the runtime packages, from the ILP32 toolchain
 keyring/build-keyring-deb.sh   # the keyring package
 meta/build-meta-debs.sh        # the metapackages
 toolchain/build-toolchain-debs.sh  # the compiler packages, from install trees of binutils and GCC
+kernel/build-deb.sh            # the kernel packages, in a Debian 13 chroot (see kernel/README.md)
 repo/make-repo.sh              # the apt repository (signed with repo/sign-release.sh)
 tests/run-install-test.sh      # install, run, purge and reinstall in QEMU
 tests/run-apt-test.sh          # apt with a signed repository, and rejection of bad signatures
@@ -135,6 +136,7 @@ the same day. Separate ILP32 packages do not depend on Debian's versions and cha
 
 ## License
 
-The scripts are under the MIT license (see `LICENSE`). The packages keep the licenses of glibc
+The scripts are under the MIT license (see `LICENSE`); `kernel/config-debian` and `kernel/patches/` come
+from Debian's `linux` package (GPL-2.0). The packages keep the licenses of glibc
 (LGPL-2.1-or-later), GCC's runtime libraries (GPL-3.0-or-later with the GCC Runtime Library Exception)
 and Linux (GPL-2.0).
