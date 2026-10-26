@@ -24,7 +24,7 @@ if ! sudo chroot "$C" getent passwd "$U" > /dev/null; then
 fi
 umount_all() {
 	for m in "$WORK" /dev/pts /dev /proc; do
-		! mountpoint -q "$C$m" || sudo umount -R "$C$m"
+		! mountpoint -q "$C$m" || sudo umount -R "$C$m" || sudo umount -lR "$C$m"
 	done
 }
 trap umount_all EXIT
