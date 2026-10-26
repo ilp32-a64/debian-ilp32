@@ -15,7 +15,7 @@ MIRROR=${MIRROR:-http://deb.debian.org/debian}
 [ ! -e "$C" ] || { echo "$C exists"; exit 1; }
 mkdir -p "$(dirname "$C")"
 sudo debootstrap --variant=buildd \
-	--include=git,bc,bison,flex,kmod,cpio,rsync,xz-utils,zstd,python3,file,passwd,pkgconf,debhelper,fakeroot,dpkg-dev,libssl-dev,libelf-dev,dwarves,gcc-14-aarch64-linux-gnu,gcc-aarch64-linux-gnu,binutils-aarch64-linux-gnu,gcc-14-arm-linux-gnueabihf,gcc-arm-linux-gnueabihf,binutils-arm-linux-gnueabihf,crossbuild-essential-arm64 \
+	--include=git,openssl,bc,bison,flex,kmod,cpio,rsync,xz-utils,zstd,python3,file,passwd,pkgconf,debhelper,fakeroot,dpkg-dev,libssl-dev,libelf-dev,dwarves,gcc-14-aarch64-linux-gnu,gcc-aarch64-linux-gnu,binutils-aarch64-linux-gnu,gcc-14-arm-linux-gnueabihf,gcc-arm-linux-gnueabihf,binutils-arm-linux-gnueabihf,crossbuild-essential-arm64 \
 	trixie "$C" "$MIRROR"
 sudo chroot "$C" /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin DEBIAN_FRONTEND=noninteractive sh -e -c '
 	dpkg --add-architecture arm64
