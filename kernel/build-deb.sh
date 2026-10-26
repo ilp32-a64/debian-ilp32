@@ -100,6 +100,24 @@ mv "$O"/../*_"$KDEB_PKGVERSION"_arm64.deb "$O"/../*_"$KDEB_PKGVERSION"_arm64.bui
 mkdir -p "$OUT/dbg"
 mv "$OUT"/linux-image-*-dbg_"$KDEB_PKGVERSION"_arm64.deb "$OUT/dbg/" 2>/dev/null || true
 "$D/fix-headers-deb.sh" "$OUT"/linux-headers-*_"$KDEB_PKGVERSION"_arm64.deb
+# /boot/config-* as Debian installs it: without the lines of the build's own module signing key and
+# build salt, which Debian's rules.real deletes too (they make no sense for another build)
+W=$(mktemp -d)
+fakeroot sh -e -c '
+	dpkg-deb -R "$1" "$2/x"
+	c=$(echo "$2"/x/boot/config-*)
+	sed -i "/CONFIG_\(MODULE_SIG_\(ALL\|KEY\)\|SYSTEM_TRUSTED_KEYS\|BUILD_SALT\)[ =]/d" "$c"
+	r=${c#"$2"/x/}
+	sed -i "\\|  $r\$|d" "$2/x/DEBIAN/md5sums"
+	(cd "$2/x" && md5sum "$r") >> "$2/x/DEBIAN/md5sums"
+	# Installed-Size as dpkg-gencontrol counts it: KiB of each file rounded up, 1 for anything else
+	k=$(find "$2/x" -path "$2/x/DEBIAN" -prune -o ! -path "$2/x" -printf "%y %s\n" |
+		awk "{ k += \$1 == \"f\" ? int((\$2 + 1023) / 1024) : 1 } END { print k }")
+	sed -i "s/^Installed-Size: .*/Installed-Size: $k/" "$2/x/DEBIAN/control"
+	dpkg-deb -Zxz --root-owner-group -b "$2/x" "$1" > /dev/null
+' sh "$(echo "$OUT"/linux-image-*-ilp32-arm64_"$KDEB_PKGVERSION"_arm64.deb)" "$W"
+rm -rf "$W"
+echo "==> /boot/config: without MODULE_SIG_ALL, MODULE_SIG_KEY, SYSTEM_TRUSTED_KEYS, BUILD_SALT"
 # package metadata: changelog distribution trixie, UTC times, the noreply maintainer; no build path in
 # any file (no pipes that stop reading early: with pipefail, SIGPIPE would end the script without a
 # message)
@@ -119,6 +137,9 @@ done
 # takes at run time)
 IMG=$(dpkg-deb -f "$OUT"/linux-image-*-ilp32-arm64_"$KDEB_PKGVERSION"_arm64.deb Package)
 dpkg-deb -x "$OUT/${IMG}_${KDEB_PKGVERSION}_arm64.deb" "$W/img"
+cfg=$(cat "$W"/img/boot/config-*)
+[[ ! "$cfg" =~ CONFIG_(MODULE_SIG_ALL|MODULE_SIG_KEY|SYSTEM_TRUSTED_KEYS|BUILD_SALT)[\ =] ]] ||
+	{ echo "ERROR: /boot/config has ${BASH_REMATCH[0]}"; exit 1; }
 I=$(echo "$W"/img/boot/vmlinuz-*)
 [ "$(od -An -c -j56 -N4 "$I" | tr -d ' ')" = 'ARMd' ] || { echo "ERROR: $I is not an uncompressed Image"; exit 1; }
 s=$(strings "$I")
