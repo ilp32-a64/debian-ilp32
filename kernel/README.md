@@ -13,7 +13,7 @@ Inputs:
 
 - `KERNEL_SRC`: a work tree of `linux-ilp32` `ilp32-6.12.y`, `REV` the commit (default `HEAD`);
   6.12.114-1+ilp32a64.1 is `64b6f40074`
-- `config-debian`: the arm64 kernel configuration of `linux-image-6.12.107+deb13-arm64-unsigned`
+- `config-debian`: the arm64 kernel configuration of `linux-image-6.12.113+deb13-arm64-unsigned`
   (Debian, GPL-2); `build-deb.sh` adds ILP32 (`ARM64_ILP32`, `COMPAT_32BIT_TIME`) and builds binder in
 - `patches/`: Debian's patch for `kernel.perf_event_paranoid=3` (`SECURITY_PERF_EVENTS_RESTRICT`), from
   the Debian `linux` package (GPL-2), refreshed for 6.12.114

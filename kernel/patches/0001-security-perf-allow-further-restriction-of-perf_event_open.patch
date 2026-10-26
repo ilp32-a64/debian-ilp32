@@ -2,7 +2,7 @@ From: Ben Hutchings <ben@decadent.org.uk>
 Date: Mon, 11 Jan 2016 15:23:55 +0000
 Subject: security,perf: Allow further restriction of perf_event_open
 Forwarded: https://lore.kernel.org/all/20160111152355.GS28542@decadent.org.uk/
-Origin: https://salsa.debian.org/kernel-team/linux/-/blob/debian/6.12.107-1/debian/patches/features/all/security-perf-allow-further-restriction-of-perf_event_open.patch
+Origin: https://salsa.debian.org/kernel-team/linux/-/blob/debian/6.12.113-1/debian/patches/features/all/security-perf-allow-further-restriction-of-perf_event_open.patch
 
 When kernel.perf_event_open is set to 3 (or greater), disallow all
 access to performance events by users without CAP_SYS_ADMIN.
