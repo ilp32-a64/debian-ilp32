@@ -79,14 +79,20 @@ else
 	NEED_DBG=(DEBUG_INFO DEBUG_INFO_BTF DEBUG_INFO_BTF_MODULES)
 	echo "==> pahole $(pahole --version 2>/dev/null || echo 'missing: install dwarves')"
 fi
+# PINCTRL_MCP23S08 (not in Debian): the MCP23017 I2C GPIO expander of the CN9130 CRB board (cp0 i2c
+# 0x20, marvell/cn9130-crb-A/B.dtb), which the USB-A VBUS, eMMC VCCQ and SFP regulators depend on; it
+# selects PINCTRL_MCP23S08_I2C and _SPI
 "$SRC/scripts/config" --file "$O/.config" \
 	-e COMPAT -e AARCH32_EL0 -e ARM64_ILP32 -e COMPAT_32BIT_TIME -e ANDROID_BINDER_IPC "${DBG[@]}" \
-	-d LOCALVERSION_AUTO --set-str LOCALVERSION ""
+	-m PINCTRL_MCP23S08 -d LOCALVERSION_AUTO --set-str LOCALVERSION ""
 "${M[@]}" -s olddefconfig
 for o in COMPAT AARCH32_EL0 ARM64_ILP32 COMPAT_32BIT_TIME ARM64_PTR_AUTH ARM64_PTR_AUTH_KERNEL ARM64_BTI \
 	 ARM64_SVE COMPAT_VDSO THUMB2_COMPAT_VDSO RELR ANDROID_BINDER_IPC SECURITY_PERF_EVENTS_RESTRICT \
 	 "${NEED_DBG[@]}"; do
 	grep -q "^CONFIG_$o=y" "$O/.config" || { echo "CONFIG_$o is not y"; exit 1; }
+done
+for o in PINCTRL_MCP23S08 PINCTRL_MCP23S08_I2C; do
+	grep -q "^CONFIG_$o=m" "$O/.config" || { echo "CONFIG_$o is not m"; exit 1; }
 done
 echo "==> kernel release $("${M[@]}" -s kernelrelease), $(grep -c '=m$' "$O/.config") modules," \
      "build time $KBUILD_BUILD_TIMESTAMP"
