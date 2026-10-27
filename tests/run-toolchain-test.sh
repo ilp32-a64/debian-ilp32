@@ -1,10 +1,13 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
 # Toolchain test on Debian 13 arm64 in QEMU: install the runtime and the on-board ILP32 compiler
-# packages, build C, C++, OpenMP, static, shared and LTO programs on the guest and run them.
+# packages with apt (which pulls in the compiler's host libraries from the Debian mirror; needs
+# network), build C, C++, OpenMP, static, shared and LTO programs on the guest and run them.
 # Needs sudo (loop mount) and the base image from make-base-image.sh.
 # Usage: run-toolchain-test.sh <work dir with base.img> <dir with runtime and toolchain .debs>
+#   MIRROR  Debian mirror (default https://deb.debian.org/debian)
 set -euo pipefail
+MIRROR=${MIRROR:-https://deb.debian.org/debian}
 WD=$(realpath "${1:?usage: run-toolchain-test.sh <work dir> <debs dir>}")
 DEBS=$(realpath "${2:?debs dir}")
 HERE=$(dirname "$(realpath "$0")")
@@ -17,7 +20,7 @@ sudo mkdir -p mnt/ilp32-test/debs mnt/ilp32-test/src
 sudo cp "$DEBS"/*.deb mnt/ilp32-test/debs/
 sudo cp "$HERE/hello.c" "$HERE/hello++.cc" "$HERE/runtime-test.c" mnt/ilp32-test/src/
 sudo install -m 0755 "$HERE/guest-toolchain-test.sh" mnt/ilp32-test/guest-toolchain-test.sh
-printf '#!/bin/bash\n./guest-toolchain-test.sh\n' | sudo tee mnt/ilp32-test/test.sh > /dev/null
+printf '#!/bin/bash\n./guest-toolchain-test.sh %s\n' "$MIRROR" | sudo tee mnt/ilp32-test/test.sh > /dev/null
 sudo chmod 0755 mnt/ilp32-test/test.sh
 sudo umount mnt
 "$HERE/qemu-boot.sh" toolchain-test.img | tee toolchain-test.log

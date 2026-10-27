@@ -15,8 +15,14 @@ expect() {
 	if echo "$out" | grep -qE "$pat"; then echo "RESULT ok: $what"; else echo "RESULT FAIL: $what"; echo "$out" | head -5; fi
 }
 
-step "C1 install"
-check dpkg -i /ilp32-test/debs/*.deb
+step "C1 install with apt (the compiler's host libraries come from $1)"
+ip link set lo up
+dev=$(ls /sys/class/net | grep -v lo | head -1)
+ip link set "$dev" up && ip addr add 10.0.2.15/24 dev "$dev" && ip route add default via 10.0.2.2
+echo "nameserver 10.0.2.3" > /etc/resolv.conf
+echo "deb $1 trixie main" > /etc/apt/sources.list
+check apt-get update -q
+check apt-get install -y -q --no-install-recommends /ilp32-test/debs/*.deb
 dpkg -l "*-ilp32" "*ilp32*" | grep '^ii' | awk '{print $2, $3}'
 $T-gcc --version | head -1
 $T-ld --version | head -1
