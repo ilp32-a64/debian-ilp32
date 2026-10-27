@@ -14,7 +14,7 @@ system stays a normal Debian 13 arm64 installation; nothing in Debian is changed
 
 ```
 # 1. the repository (once)
-wget https://github.com/ilp32-a64/debian-ilp32/releases/download/v2026.10.24/ilp32-a64-archive-keyring_2026.10.24_all.deb
+wget https://github.com/ilp32-a64/debian-ilp32/releases/download/v2026.10.27/ilp32-a64-archive-keyring_2026.10.24_all.deb
 sudo apt install ./ilp32-a64-archive-keyring_2026.10.24_all.deb
 sudo apt update
 
@@ -33,7 +33,7 @@ uname -r        # 6.12.114-ilp32-arm64
 sudo apt install gcc-aarch64-linux-gnu-ilp32 g++-aarch64-linux-gnu-ilp32
 ```
 
-**The compiler packages are temporarily withdrawn.** The 2026.10.27 compiler declared
+**The compiler packages are temporarily withdrawn.** The first build of the compiler declared
 `omp_nest_lock_t` with the wrong size in `omp.h` (a Debian patch for LP64 multilibs that does not fit
 ILP32), so OpenMP programs that use nest locks overwrite memory. A fixed compiler follows; until
 then the repository has no compiler packages. The runtime libraries, including `libgomp1-ilp32`,
@@ -42,22 +42,6 @@ are not affected.
 Updates: `sudo apt update && sudo apt upgrade`. New kernel versions come as new packages
 (`linux-image-6.12.N-ilp32-arm64`); `linux-image-ilp32-arm64` follows them with `apt upgrade` or
 `apt full-upgrade` (`apt-get upgrade` keeps them back).
-
-### Upgrading from 2026.10.24
-
-Release 2026.10.27 rebuilt the GCC runtime libraries from Debian 13's `gcc-14` 14.2.0-19, so their
-versions are lower than the GCC 14.3 packages of 2026.10.24, and `apt upgrade` keeps the old ones.
-If you have the compiler of 2026.10.24 installed, keep it until the fixed compiler is out: plain
-`apt upgrade` updates the kernel and keeps the compiler with its glibc and GCC runtime. Otherwise
-switch once (the pin lets apt take this repository's versions, also lower ones):
-
-```
-printf 'Package: *\nPin: release o=ILP32-A64\nPin-Priority: 1001\n' | sudo tee /etc/apt/preferences.d/ilp32-a64-once
-sudo apt update && sudo apt upgrade --allow-downgrades
-sudo rm /etc/apt/preferences.d/ilp32-a64-once
-```
-
-Later updates need nothing special.
 
 ### Which machines
 
