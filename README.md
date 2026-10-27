@@ -29,8 +29,15 @@ sudo reboot
 uname -r        # 6.12.114-ilp32-arm64
 
 # 5. optional: the compiler, to build ILP32 programs on the machine itself
+#    (temporarily withdrawn, see below)
 sudo apt install gcc-aarch64-linux-gnu-ilp32 g++-aarch64-linux-gnu-ilp32
 ```
+
+**The compiler packages are temporarily withdrawn.** The 2026.10.27 compiler declared
+`omp_nest_lock_t` with the wrong size in `omp.h` (a Debian patch for LP64 multilibs that does not fit
+ILP32), so OpenMP programs that use nest locks overwrite memory. A fixed compiler follows; until
+then the repository has no compiler packages. The runtime libraries, including `libgomp1-ilp32`,
+are not affected.
 
 Updates: `sudo apt update && sudo apt upgrade`. New kernel versions come as new packages
 (`linux-image-6.12.N-ilp32-arm64`); `linux-image-ilp32-arm64` follows them with `apt upgrade` or
@@ -38,10 +45,11 @@ Updates: `sudo apt update && sudo apt upgrade`. New kernel versions come as new 
 
 ### Upgrading from 2026.10.24
 
-Release 2026.10.27 rebuilt the GCC runtime libraries and the compiler from Debian 13's `gcc-14`
-14.2.0-19, so their versions are lower than the GCC 14.3 packages of 2026.10.24, and `apt upgrade`
-keeps the old ones (and, with the compiler installed, glibc too, which the old `libc6-dev-ilp32`
-holds at its version). Switch once (the pin lets apt take this repository's versions, also lower ones):
+Release 2026.10.27 rebuilt the GCC runtime libraries from Debian 13's `gcc-14` 14.2.0-19, so their
+versions are lower than the GCC 14.3 packages of 2026.10.24, and `apt upgrade` keeps the old ones.
+If you have the compiler of 2026.10.24 installed, keep it until the fixed compiler is out: plain
+`apt upgrade` updates the kernel and keeps the compiler with its glibc and GCC runtime. Otherwise
+switch once (the pin lets apt take this repository's versions, also lower ones):
 
 ```
 printf 'Package: *\nPin: release o=ILP32-A64\nPin-Priority: 1001\n' | sudo tee /etc/apt/preferences.d/ilp32-a64-once
@@ -88,8 +96,8 @@ All are `Architecture: arm64`, except the keyring (`all`):
 | `linux-image-ilp32-arm64`, `linux-headers-ilp32-arm64` | 6.12.114+ilp32a64.2 | metapackages: the latest kernel and headers |
 | `linux-image-6.12.114-ilp32-arm64`, `linux-headers-6.12.114-ilp32-arm64` | 6.12.114-1+ilp32a64.2 | the kernel and its headers |
 | `ilp32-a64-archive-keyring` | 2026.10.24 | the repository key and apt source |
-| `gcc-aarch64-linux-gnu-ilp32`, `g++-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.1 | metapackages: the compiler commands without version suffix |
-| `gcc-14-aarch64-linux-gnu-ilp32`, `g++-14-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.1 | Debian's `gcc-14` C and C++ compilers for ILP32, running on arm64 |
+| `gcc-aarch64-linux-gnu-ilp32`, `g++-aarch64-linux-gnu-ilp32` | withdrawn, a fixed version follows | metapackages: the compiler commands without version suffix |
+| `gcc-14-aarch64-linux-gnu-ilp32`, `g++-14-aarch64-linux-gnu-ilp32` | withdrawn, a fixed version follows | Debian's `gcc-14` C and C++ compilers for ILP32, running on arm64 |
 | `binutils-aarch64-linux-gnu-ilp32` | 2.44-3+ilp32a64.1 | Debian's binutils for ILP32: assembler, linker and binary tools |
 | `libc6-dev-ilp32` | 2.41-12+deb13u4+ilp32a64.1 | glibc headers, crt files, static libraries and linker scripts |
 | `linux-libc-dev-ilp32` | 6.12.114-1+ilp32a64.2 | Linux UAPI headers with the ILP32 ABI |
