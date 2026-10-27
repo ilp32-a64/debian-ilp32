@@ -10,7 +10,8 @@
 # - Debian's patch for kernel.perf_event_paranoid=3 (patches/, applied to KERNEL_TREE)
 # No build user, host or path in the packages: KBUILD_BUILD_USER/HOST, -ffile-prefix-map.
 #
-# Usage: chroot-run.sh env [VAR=...] kernel/build-deb.sh
+# Usage: chroot-run.sh --fresh env [VAR=...] kernel/build-deb.sh     (release builds: a fresh chroot)
+#        chroot-run.sh env [VAR=...] kernel/build-deb.sh             (development builds)
 #   KERNEL_SRC       linux-ilp32 work tree to build from (default ~/work/wt/ilp32-6.12.y)
 #   REV              commit of KERNEL_SRC (default HEAD)
 #   KERNEL_TREE      work tree for the build: REV plus patches/, reset on every run
@@ -22,7 +23,8 @@
 #   KLOCALVERSION    release suffix (default -ilp32-arm64: linux-image-<version>-ilp32-arm64)
 #   NODEBUG=1        no debug info, no BTF, no -dbg package
 # Output: OUT/linux-image-*.deb, OUT/linux-headers-*.deb (published), OUT/linux-libc-dev_*.deb and
-# OUT/dbg/ (not published), OUT/build.log
+# OUT/dbg/ (not published), OUT/build.log, OUT/build-env.txt (the chroot: BUILD_CHROOT of chroot-run.sh
+# and its package list)
 set -euo pipefail
 umask 022
 D=$(dirname "$(realpath "$0")")
@@ -65,6 +67,10 @@ done
 echo "==> $(git -C "$SRC" log -1 --format='%h %s'), package version $KDEB_PKGVERSION"
 echo "==> $(aarch64-linux-gnu-gcc-14 --version | head -1); $(aarch64-linux-gnu-ld --version | head -1)"
 mkdir -p "$O" "$OUT"
+# the build environment, next to the packages
+{ echo "# $KDEB_PKGVERSION built in: ${BUILD_CHROOT:-unknown}"; echo "# Debian $(cat /etc/debian_version)"
+  COLUMNS=250 dpkg -l; } > "$OUT/build-env.txt"
+echo "==> build chroot: ${BUILD_CHROOT:-unknown}"
 cp "$D/config-debian" "$O/.config"
 # ILP32 (COMPAT is on in Debian; AARCH32_EL0 keeps AArch32 as in Debian), no LOCALVERSION from the config
 # (LOCALVERSION=$LV on the command line), binder built in (a module in Debian only with Debian's patches

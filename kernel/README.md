@@ -5,8 +5,8 @@ the [linux-ilp32](https://github.com/ilp32-a64/linux-ilp32) branch `ilp32-6.12.y
 AArch64 ILP32 ABI) with Debian 13's arm64 kernel configuration, compiler and packaging conventions.
 
 ```
-kernel/setup-chroot.sh                                  # once: Debian 13 build chroot (sudo, debootstrap)
-kernel/chroot-run.sh env JOBS=2 "$PWD/kernel/build-deb.sh"
+kernel/setup-chroot.sh                                  # Debian 13 build environment: base tarball (sudo, debootstrap)
+kernel/chroot-run.sh --fresh env JOBS=2 "$PWD/kernel/build-deb.sh"     # release build, in a fresh chroot
 ```
 
 Inputs:
@@ -32,6 +32,10 @@ Built with Debian 13's cross toolchain in the chroot (gcc-14, binutils 2.44, pah
 uncompressed `Image`, the AArch32 compat vDSO, Debian's debug info and BTF settings. `fix-headers-deb.sh`
 removes build-host files from `linux-headers`, makes the kernel's compiler its default and adds
 `Depends: gcc-14, make, libc6-dev`.
+
+Release builds run in a fresh copy of the base tarball, removed afterwards; development builds may
+use the long-lived chroot (`chroot-run.sh` without `--fresh`). `OUT/build-env.txt` records which and its
+package list.
 
 Outputs in `OUT` (default `~/work/debian-ilp32-kernel/out`): the `linux-image` and `linux-headers` .debs.
 `linux-libc-dev` and the `-dbg` package (`OUT/dbg/`, about 1 GB) are built too but not published.
