@@ -51,6 +51,38 @@ check ./exc
 step "C4 OpenMP, libm, libatomic, iconv, NSS"
 check $T-gcc -O2 -fopenmp -o runtime-test $S/runtime-test.c -lm -latomic
 check ./runtime-test
+# omp.h must match libgomp's lock sizes for ILP32 (a Debian patch sized omp_nest_lock_t for LP64):
+# nest locks in a struct with guard words around them, used by several threads
+cat > nestlock.c <<'EOF'
+#include <omp.h>
+#include <stdio.h>
+#include <stdalign.h>
+static struct { unsigned long before; omp_nest_lock_t l; unsigned long after; } s = { 0x5a5a5a5a, {0}, 0xa5a5a5a5 };
+int main(void)
+{
+	int n = 0;
+	printf("omp_lock_t %zu/%zu, omp_nest_lock_t %zu/%zu\n", sizeof(omp_lock_t), alignof(omp_lock_t),
+	       sizeof(omp_nest_lock_t), alignof(omp_nest_lock_t));
+	if (sizeof(omp_nest_lock_t) != 24 || alignof(omp_nest_lock_t) != 8)
+		return 1;
+	omp_init_nest_lock(&s.l);
+#pragma omp parallel num_threads(4) reduction(+:n)
+	for (int i = 0; i < 1000; i++) {
+		omp_set_nest_lock(&s.l);
+		if (omp_test_nest_lock(&s.l) == 2)
+			n++;
+		omp_unset_nest_lock(&s.l);
+		omp_unset_nest_lock(&s.l);
+	}
+	omp_destroy_nest_lock(&s.l);
+	printf("nested %d, guards %lx %lx\n", n, s.before, s.after);
+	return n != 4000 || s.before != 0x5a5a5a5a || s.after != 0xa5a5a5a5;
+}
+EOF
+check $T-gcc -O2 -fopenmp -o nestlock nestlock.c
+check ./nestlock
+check $T-gcc -O2 -fopenmp -static -o nestlock-static nestlock.c
+check ./nestlock-static
 
 step "C5 static"
 check $T-gcc -O2 -static -o hello-static $S/hello.c

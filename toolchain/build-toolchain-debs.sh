@@ -14,6 +14,8 @@
 # tree is missing are skipped.
 # Usage: build-toolchain-debs.sh <stage dir> [output dir]
 #   CC_STAGE  stage dir of binutils, gcc-14 and g++-14 (default: the stage dir)
+#   ONLY      "compiler": only gcc-14, g++-14 and their metapackages (a compiler rebuilt against
+#             released dev and runtime packages, which must not be packaged again)
 set -euo pipefail
 umask 022
 STAGE=$(realpath "${1:?usage: build-toolchain-debs.sh <stage dir> [output dir]}")
@@ -33,12 +35,16 @@ GLIBC_VER=$(need libc6-dev-ilp32 "$(manifest_ver "$STAGE" libc6-dev-ilp32)")
 KVER=$(need linux-libc-dev-ilp32 "$(manifest_ver "$STAGE" linux-libc-dev-ilp32)")
 GCC_VER=$(manifest_ver "$CC_STAGE" gcc-14-aarch64-linux-gnu-ilp32)
 GCC_VER=${GCC_VER:-$(need libgcc-s1-ilp32 "$(manifest_ver "$STAGE" libgcc-s1-ilp32)")}
+# The GCC runtime packages the compiler goes with (a "runtime: <version>" line in the compiler's
+# MANIFEST when the compiler was rebuilt alone)
+RT_VER=$(sed -n 's/^ *runtime: *\([^ ]*\).*/\1/p' "$CC_STAGE/MANIFEST" | head -1)
+RT_VER=${RT_VER:-$(need libgcc-s1-ilp32 "$(manifest_ver "$STAGE" libgcc-s1-ilp32)")}
 BIN_VER=$(manifest_ver "$CC_STAGE" binutils-aarch64-linux-gnu-ilp32)
 KCOMMIT=$(grep -o 'linux-ilp32 ilp32-6.12.y [0-9a-f]*' "$STAGE/MANIFEST" | awk '{print $3}')
-echo "glibc $GLIBC_VER, linux $KVER ($KCOMMIT), gcc $GCC_VER, binutils ${BIN_VER:-none}"
+echo "glibc $GLIBC_VER, linux $KVER ($KCOMMIT), gcc $GCC_VER (runtime $RT_VER), binutils ${BIN_VER:-none}"
 # The runtime packages the dev files must match exactly
 RT="libc6-ilp32 (= $GLIBC_VER)"
-GRT="libgcc-s1-ilp32 (= $GCC_VER), libatomic1-ilp32 (= $GCC_VER), libgomp1-ilp32 (= $GCC_VER)"
+GRT="libgcc-s1-ilp32 (= $RT_VER), libatomic1-ilp32 (= $RT_VER), libgomp1-ilp32 (= $RT_VER)"
 
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
@@ -147,6 +153,7 @@ EOF
 	echo "built $OUT/${name}_${ver}_$arch.deb"
 }
 
+if [ "${ONLY:-}" != compiler ]; then
 pkg linux-libc-dev-ilp32 "$KVER" all devel linux "" \
 	"Linux UAPI headers for AArch64 ILP32" \
 	"Linux kernel headers for user space with the AArch64 ILP32 ABI, in /usr/$T/include, for the aarch64-linux-gnu_ilp32 compiler." \
@@ -155,26 +162,32 @@ pkg libc6-dev-ilp32 "$GLIBC_VER" arm64 libdevel glibc "$RT, linux-libc-dev-ilp32
 	"GNU C Library: AArch64 ILP32 development files" \
 	"Headers (/usr/$T/include), crt files, static libraries and linker scripts (/usr/libilp32) of Debian's glibc to build programs for the AArch64 ILP32 ABI against libc6-ilp32." \
 	"$STAGE/libc6-dev-ilp32"
+fi
 
-if [ ! -d "$CC_STAGE/gcc-14-aarch64-linux-gnu-ilp32" ] || [ -z "$BIN_VER" ]; then
+if [ ! -d "$CC_STAGE/gcc-14-aarch64-linux-gnu-ilp32" ]; then
 	echo "no compiler trees in $CC_STAGE: binutils, gcc and g++ packages skipped"
 	exit 0
 fi
+# binutils from the compiler's stage dir; with ONLY=compiler the compiler depends on the released one
+BIN_VER=${BIN_VER:-$(manifest_ver "$STAGE" binutils-aarch64-linux-gnu-ilp32)}
+[ -n "$BIN_VER" ] || { echo "no binutils version in the MANIFESTs" >&2; exit 1; }
 # (assignments, so that a library without a known package stops the build)
-BIN_DEP=$(host_dep "$CC_STAGE/binutils-aarch64-linux-gnu-ilp32")
 GCC_DEP=$(host_dep "$CC_STAGE/gcc-14-aarch64-linux-gnu-ilp32")
 GXX_DEP=$(host_dep "$CC_STAGE/g++-14-aarch64-linux-gnu-ilp32")
+if [ "${ONLY:-}" != compiler ]; then
+BIN_DEP=$(host_dep "$CC_STAGE/binutils-aarch64-linux-gnu-ilp32")
 pkg binutils-aarch64-linux-gnu-ilp32 "$BIN_VER" arm64 devel binutils "$BIN_DEP" \
 	"GNU binary utilities for AArch64 ILP32" \
 	"Debian's GNU assembler, linker and binary utilities for the AArch64 ILP32 ABI, named $T-as, $T-ld and so on." \
 	"$CC_STAGE/binutils-aarch64-linux-gnu-ilp32"
+fi
 pkg gcc-14-aarch64-linux-gnu-ilp32 "$GCC_VER" arm64 devel gcc-14 \
 	"$GCC_DEP, binutils-aarch64-linux-gnu-ilp32 (>= $BIN_VER), libc6-dev-ilp32 (= $GLIBC_VER), $GRT" \
 	"GNU C compiler 14 for AArch64 ILP32" \
 	"Debian's GCC 14 for the AArch64 ILP32 ABI ($T-gcc-14), running on Debian 13 arm64. Programs it builds use the ILP32 runtime in /usr/libilp32 and run on a kernel with the ILP32 ABI." \
 	"$CC_STAGE/gcc-14-aarch64-linux-gnu-ilp32"
 pkg g++-14-aarch64-linux-gnu-ilp32 "$GCC_VER" arm64 devel gcc-14 \
-	"$GXX_DEP, gcc-14-aarch64-linux-gnu-ilp32 (= $GCC_VER), libstdc++6-ilp32 (= $GCC_VER)" \
+	"$GXX_DEP, gcc-14-aarch64-linux-gnu-ilp32 (= $GCC_VER), libstdc++6-ilp32 (= $RT_VER)" \
 	"GNU C++ compiler 14 for AArch64 ILP32" \
 	"Debian's G++ 14 for the AArch64 ILP32 ABI ($T-g++-14) and the libstdc++ development files." \
 	"$CC_STAGE/g++-14-aarch64-linux-gnu-ilp32"
