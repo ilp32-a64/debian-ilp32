@@ -117,8 +117,10 @@ runtime libraries by themselves.
 
 - Sources: Debian 13's `glibc` 2.41-12+deb13u4, `gcc-14` 14.2.0-19 and `binutils` 2.44-3 (the
   `.dsc` files, checked by sha256), with all of Debian's patches; the ILP32 patches on top are those
-  of [glibc-ilp32](https://github.com/ilp32-a64/glibc-ilp32) and the libgcc/libatomic fixes. Kernel UAPI
-  headers from linux-ilp32 `64b6f40074`.
+  of [glibc-ilp32](https://github.com/ilp32-a64/glibc-ilp32) and the libgcc/libatomic fixes (the
+  compiler's full source: [gcc-ilp32](https://github.com/ilp32-a64/gcc-ilp32) branch
+  `ilp32-14.2.0-19`, on top of Debian's patches in `debian-14.2.0-19`). Kernel UAPI headers from
+  linux-ilp32 `64b6f40074`.
 - Options: Debian's configure options and flags, with the changes ILP32 needs: the
   `aarch64-linux-gnu_ilp32` target, libraries in `/usr/libilp32`, `-mbranch-protection=bti` instead
   of `standard` (GCC has no `pac-ret` for ILP32), no memory tagging and no libmvec in glibc, no
