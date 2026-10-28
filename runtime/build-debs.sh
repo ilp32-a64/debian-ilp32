@@ -11,6 +11,8 @@
 #   Versions come from the MANIFEST (Debian version + "+ilp32a64.N"); copyright and changelog from
 #   Debian's (doc/glibc.*, doc/gcc-14.*).
 #   STRIP  strip for ILP32 objects (default: aarch64-linux-gnu_ilp32-strip, else aarch64-linux-gnu-strip)
+#   ONLY   "glibc": only libc6-ilp32 (a glibc rebuilt alone; the GCC runtime stays as released)
+#   NOTE   an extra line for our changelog entry (what changed in this revision)
 set -euo pipefail
 umask 022
 STAGE=$(realpath "${1:?usage: build-debs.sh <stage dir> [output dir]}")
@@ -28,11 +30,15 @@ manifest_ver() {
 	echo "$v"
 }
 GLIBC_VER=$(manifest_ver libc6-ilp32)
-GCC_VER=$(manifest_ver libgcc-s1-ilp32)
 GLIBC_UP=${GLIBC_VER%%-*}
-GCC_UP=${GCC_VER%%-*}
-echo "glibc $GLIBC_VER, GCC $GCC_VER, strip $STRIP"
-for f in glibc.copyright glibc.changelog gcc-14.copyright gcc-14.changelog; do
+DOCS="glibc.copyright glibc.changelog"
+if [ "${ONLY:-}" != glibc ]; then
+	GCC_VER=$(manifest_ver libgcc-s1-ilp32)
+	GCC_UP=${GCC_VER%%-*}
+	DOCS="$DOCS gcc-14.copyright gcc-14.changelog"
+fi
+echo "glibc $GLIBC_VER, GCC ${GCC_VER:-not packaged}, strip $STRIP"
+for f in $DOCS; do
 	[ -s "$DOC/$f" ] || { echo "missing $DOC/$f" >&2; exit 1; }
 done
 
@@ -77,7 +83,8 @@ $name ($ver) trixie; urgency=medium
 
   * Debian's $src ${ver%+ilp32a64.*} built for the AArch64 ILP32 ABI
     (aarch64-linux-gnu_ilp32), installed in /usr/libilp32; see
-    https://github.com/ilp32-a64/debian-ilp32 for the patches and options.
+    https://github.com/ilp32-a64/debian-ilp32 for the patches and options.${NOTE:+
+  * $NOTE}
 
  -- $MAINT  $(LC_ALL=C TZ=UTC date -R)
 
@@ -109,6 +116,8 @@ EOF
 pkg libc6-ilp32 "$GLIBC_VER" glibc "" \
 	"GNU C Library: AArch64 ILP32 shared libraries" \
 	"Debian's GNU C Library $GLIBC_UP for the AArch64 ILP32 ABI (32-bit pointers and long on 64-bit Arm), installed next to the system's LP64 libraries: dynamic linker /usr/lib/ld-linux-aarch64_ilp32.so.1, libraries in /usr/libilp32. Running ILP32 programs needs a kernel with ARM64_ILP32."
+
+[ "${ONLY:-}" = glibc ] && exit 0
 
 # --- GCC runtime libraries -------------------------------------------------------
 LIBC_DEP="libc6-ilp32 (>= $GLIBC_UP)"

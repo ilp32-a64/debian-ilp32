@@ -16,6 +16,11 @@
 #   CC_STAGE  stage dir of binutils, gcc-14 and g++-14 (default: the stage dir)
 #   ONLY      "compiler": only gcc-14, g++-14 and their metapackages (a compiler rebuilt against
 #             released dev and runtime packages, which must not be packaged again)
+#             "libc": only libc6-dev-ilp32 (a glibc rebuilt alone)
+#   KVER      version of the released linux-libc-dev-ilp32 (with ONLY=libc, when no MANIFEST names it)
+#   GCC_VER   version of the compiler packages (default from the MANIFEST; a higher one repackages
+#             the same trees, e.g. for changed dependencies)
+#   NOTE      an extra line for our changelog entry (what changed in this revision)
 #   BIN_VER   version of the released binutils the compiler depends on (with ONLY=compiler, when no
 #             MANIFEST names it)
 set -euo pipefail
@@ -34,19 +39,25 @@ manifest_ver() {
 }
 need() { [ -n "$2" ] || { echo "no version for $1 in the MANIFEST" >&2; exit 1; }; echo "$2"; }
 GLIBC_VER=$(need libc6-dev-ilp32 "$(manifest_ver "$STAGE" libc6-dev-ilp32)")
-KVER=$(need linux-libc-dev-ilp32 "$(manifest_ver "$STAGE" linux-libc-dev-ilp32)")
-GCC_VER=$(manifest_ver "$CC_STAGE" gcc-14-aarch64-linux-gnu-ilp32)
-GCC_VER=${GCC_VER:-$(need libgcc-s1-ilp32 "$(manifest_ver "$STAGE" libgcc-s1-ilp32)")}
-# The GCC runtime packages the compiler goes with (a "runtime: <version>" line in the compiler's
-# MANIFEST when the compiler was rebuilt alone)
-RT_VER=$(sed -n 's/^ *runtime: *\([^ ]*\).*/\1/p' "$CC_STAGE/MANIFEST" | head -1 || true)
-RT_VER=${RT_VER:-$(need libgcc-s1-ilp32 "$(manifest_ver "$STAGE" libgcc-s1-ilp32)")}
-BIN_VER=${BIN_VER:-$(manifest_ver "$CC_STAGE" binutils-aarch64-linux-gnu-ilp32)}
-KCOMMIT=$(grep -o 'linux-ilp32 ilp32-6.12.y [0-9a-f]*' "$STAGE/MANIFEST" | awk '{print $3}')
-echo "glibc $GLIBC_VER, linux $KVER ($KCOMMIT), gcc $GCC_VER (runtime $RT_VER), binutils ${BIN_VER:-none}"
+KVER=${KVER:-$(need linux-libc-dev-ilp32 "$(manifest_ver "$STAGE" linux-libc-dev-ilp32)")}
+if [ "${ONLY:-}" != libc ]; then
+	GCC_VER=${GCC_VER:-$(manifest_ver "$CC_STAGE" gcc-14-aarch64-linux-gnu-ilp32)}
+	GCC_VER=${GCC_VER:-$(need libgcc-s1-ilp32 "$(manifest_ver "$STAGE" libgcc-s1-ilp32)")}
+	# The GCC runtime packages the compiler goes with (a "runtime: <version>" line in the
+	# compiler's MANIFEST when the compiler was rebuilt alone)
+	RT_VER=$(sed -n 's/^ *runtime: *\([^ ]*\).*/\1/p' "$CC_STAGE/MANIFEST" | head -1 || true)
+	RT_VER=${RT_VER:-$(need libgcc-s1-ilp32 "$(manifest_ver "$STAGE" libgcc-s1-ilp32)")}
+	BIN_VER=${BIN_VER:-$(manifest_ver "$CC_STAGE" binutils-aarch64-linux-gnu-ilp32)}
+fi
+KCOMMIT=$(grep -o 'linux-ilp32 ilp32-6.12.y [0-9a-f]*' "$STAGE/MANIFEST" | awk '{print $3}' || true)
+echo "glibc $GLIBC_VER, linux $KVER (${KCOMMIT:-?}), gcc ${GCC_VER:-none} (runtime ${RT_VER:-none}), binutils ${BIN_VER:-none}"
 # The runtime packages the dev files must match exactly
 RT="libc6-ilp32 (= $GLIBC_VER)"
-GRT="libgcc-s1-ilp32 (= $RT_VER), libatomic1-ilp32 (= $RT_VER), libgomp1-ilp32 (= $RT_VER)"
+GRT="libgcc-s1-ilp32 (= ${RT_VER:-}), libatomic1-ilp32 (= ${RT_VER:-}), libgomp1-ilp32 (= ${RT_VER:-})"
+# doc_file <name>: Debian's copyright or changelog, from the compiler's stage dir or the main one
+doc_file() {
+	if [ -s "$CC_STAGE/doc/$1" ]; then echo "$CC_STAGE/doc/$1"; else echo "$STAGE/doc/$1"; fi
+}
 
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
@@ -100,7 +111,7 @@ strip_tree() {
 # copyright <source>: Debian's copyright file of the source, ours for linux and the metapackages
 copyright() {
 	case $1 in
-	glibc | gcc-14 | binutils) cat "$STAGE/doc/$1.copyright" ;;
+	glibc | gcc-14 | binutils) cat "$(doc_file "$1.copyright")" ;;
 	linux)
 		printf 'Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/\nUpstream-Name: Linux (AArch64 ILP32)\nSource: https://github.com/ilp32-a64/linux-ilp32 (branch ilp32-6.12.y, commit %s)\n\nFiles: *\nCopyright: Linus Torvalds and others\nLicense: GPL-2 WITH Linux-syscall-note\n On Debian systems, the full text of the GNU General Public License version 2\n can be found in /usr/share/common-licenses/GPL-2.\n' "$KCOMMIT" ;;
 	mit)
@@ -130,11 +141,12 @@ pkg() {
 $name ($ver) trixie; urgency=medium
 
   * Built for the AArch64 ILP32 ABI (aarch64-linux-gnu_ilp32) on Debian 13 arm64;
-    see https://github.com/ilp32-a64/debian-ilp32 for the patches and options.
+    see https://github.com/ilp32-a64/debian-ilp32 for the patches and options.${NOTE:+
+  * $NOTE}
 
  -- $MAINT  $(LC_ALL=C TZ=UTC date -R)
 EOF
-		case $src in glibc | gcc-14 | binutils) echo; debian_entry "$STAGE/doc/$src.changelog" ;; esac
+		case $src in glibc | gcc-14 | binutils) echo; debian_entry "$(doc_file "$src.changelog")" ;; esac
 	} | gzip -9n > "$D/usr/share/doc/$name/changelog.Debian.gz"
 	{
 		echo "Package: $name"
@@ -155,16 +167,19 @@ EOF
 	echo "built $OUT/${name}_${ver}_$arch.deb"
 }
 
-if [ "${ONLY:-}" != compiler ]; then
+if [ -z "${ONLY:-}" ]; then
 pkg linux-libc-dev-ilp32 "$KVER" all devel linux "" \
 	"Linux UAPI headers for AArch64 ILP32" \
 	"Linux kernel headers for user space with the AArch64 ILP32 ABI, in /usr/$T/include, for the aarch64-linux-gnu_ilp32 compiler." \
 	"$STAGE/linux-libc-dev-ilp32"
+fi
+if [ -z "${ONLY:-}" ] || [ "$ONLY" = libc ]; then
 pkg libc6-dev-ilp32 "$GLIBC_VER" arm64 libdevel glibc "$RT, linux-libc-dev-ilp32 (= $KVER)" \
 	"GNU C Library: AArch64 ILP32 development files" \
 	"Headers (/usr/$T/include), crt files, static libraries and linker scripts (/usr/libilp32) of Debian's glibc to build programs for the AArch64 ILP32 ABI against libc6-ilp32." \
 	"$STAGE/libc6-dev-ilp32"
 fi
+[ "${ONLY:-}" = libc ] && exit 0
 
 if [ ! -d "$CC_STAGE/gcc-14-aarch64-linux-gnu-ilp32" ]; then
 	echo "no compiler trees in $CC_STAGE: binutils, gcc and g++ packages skipped"
@@ -184,7 +199,7 @@ pkg binutils-aarch64-linux-gnu-ilp32 "$BIN_VER" arm64 devel binutils "$BIN_DEP" 
 	"$CC_STAGE/binutils-aarch64-linux-gnu-ilp32"
 fi
 pkg gcc-14-aarch64-linux-gnu-ilp32 "$GCC_VER" arm64 devel gcc-14 \
-	"$GCC_DEP, binutils-aarch64-linux-gnu-ilp32 (>= $BIN_VER), libc6-dev-ilp32 (= $GLIBC_VER), $GRT" \
+	"$GCC_DEP, binutils-aarch64-linux-gnu-ilp32 (>= $BIN_VER), libc6-dev-ilp32 (>= $GLIBC_VER), $GRT" \
 	"GNU C compiler 14 for AArch64 ILP32" \
 	"Debian's GCC 14 for the AArch64 ILP32 ABI ($T-gcc-14), running on Debian 13 arm64. Programs it builds use the ILP32 runtime in /usr/libilp32 and run on a kernel with the ILP32 ABI." \
 	"$CC_STAGE/gcc-14-aarch64-linux-gnu-ilp32"

@@ -84,6 +84,50 @@ check ./nestlock
 check $T-gcc -O2 -fopenmp -static -o nestlock-static nestlock.c
 check ./nestlock-static
 
+step "C4b TLS of a dlopen'ed library (TLS descriptors, dynamic TLS block from malloc)"
+# glibc 2.41-12+deb13u4+ilp32a64.1 returned the TLS descriptor offset in 32 bits; a dynamic TLS
+# block below the thread pointer then faulted 4 GiB away
+cat > tlsmod.c <<'EOF'
+__thread int tv[256];
+int bump(int i) { return ++tv[i % 256]; }
+int *addr(void) { return tv; }
+EOF
+cat > tlsmain.c <<'EOF'
+#include <dlfcn.h>
+#include <pthread.h>
+#include <stdio.h>
+static int (*bump)(int);
+static int *(*addr)(void);
+static void *run(void *arg)
+{
+	int n = 0;
+	for (int i = 0; i < 1000; i++)
+		n = bump(7);
+	return (void *)(long)(n == 1000 && addr()[7] == 1000);
+}
+int main(void)
+{
+	void *h = dlopen("./libtlsmod.so", RTLD_NOW);
+	if (!h) { printf("dlopen: %s\n", dlerror()); return 1; }
+	bump = (int (*)(int))dlsym(h, "bump");
+	addr = (int *(*)(void))dlsym(h, "addr");
+	pthread_t t[4];
+	void *r;
+	int ok = run(0) != 0;
+	for (int i = 0; i < 4; i++)
+		pthread_create(&t[i], 0, run, 0);
+	for (int i = 0; i < 4; i++) {
+		pthread_join(t[i], &r);
+		ok &= r != 0;
+	}
+	printf("dlopen TLS: tv at %p, %s\n", (void *)addr(), ok ? "ok" : "wrong");
+	return !ok;
+}
+EOF
+check $T-gcc -O2 -fPIC -shared -o libtlsmod.so tlsmod.c
+check $T-gcc -O2 -pthread -o tlsmain tlsmain.c
+check ./tlsmain
+
 step "C5 static"
 check $T-gcc -O2 -static -o hello-static $S/hello.c
 check ./hello-static
