@@ -43,7 +43,7 @@ Updates: `sudo apt update && sudo apt upgrade`. New kernel versions come as new 
 | UEFI with GRUB (servers, VMs, UEFI boards) | `linux-image-ilp32-arm64` | tested in QEMU |
 | Raspberry Pi 3 Model B+ with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | tested on hardware |
 | Raspberry Pi 4 with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | should work, untested |
-| U-Boot boards with Debian's `u-boot-menu` (extlinux), e.g. the Marvell CN9130 CRB | `linux-image-ilp32-arm64` | tested on hardware (CN9130 CRB) |
+| U-Boot boards with Debian's `u-boot-menu` (extlinux), e.g. the Marvell CN9130 CRB or the Globalscale ESPRESSObin | `linux-image-ilp32-arm64` | tested on hardware (CN9130 CRB; ESPRESSObin v5, 1 GiB) |
 | Boards that need a vendor kernel | the vendor kernel with the [ILP32 patches](https://github.com/ilp32-a64/linux-ilp32) | install `ilp32-runtime` only |
 
 ### About the kernel
