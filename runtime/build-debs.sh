@@ -23,7 +23,7 @@ DOC=$STAGE/doc
 # manifest_ver <package>: the version the MANIFEST gives for a package
 manifest_ver() {
 	local v
-	v=$(grep -E "^ +([a-z0-9+.-]+, )*$1(,| )" "$STAGE/MANIFEST" | head -1 | awk '{print $NF}')
+	v=$(grep -E "^ +([a-z0-9+.-]+, )*$1(, [a-z0-9+.-]+)* +[0-9][^ ,]*$" "$STAGE/MANIFEST" | head -1 | awk '{print $NF}' || true)
 	[ -n "$v" ] || { echo "no version for $1 in $STAGE/MANIFEST" >&2; exit 1; }
 	echo "$v"
 }

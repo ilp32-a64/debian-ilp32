@@ -16,6 +16,8 @@
 #   CC_STAGE  stage dir of binutils, gcc-14 and g++-14 (default: the stage dir)
 #   ONLY      "compiler": only gcc-14, g++-14 and their metapackages (a compiler rebuilt against
 #             released dev and runtime packages, which must not be packaged again)
+#   BIN_VER   version of the released binutils the compiler depends on (with ONLY=compiler, when no
+#             MANIFEST names it)
 set -euo pipefail
 umask 022
 STAGE=$(realpath "${1:?usage: build-toolchain-debs.sh <stage dir> [output dir]}")
@@ -28,7 +30,7 @@ STRIP64=${STRIP64:-$(command -v aarch64-linux-gnu-strip || command -v strip)}
 
 # manifest_ver <stage dir> <package>: the version the MANIFEST gives for a package
 manifest_ver() {
-	grep -E "^ +([a-z0-9+.-]+, )*$2(,| )" "$1/MANIFEST" 2>/dev/null | head -1 | awk '{print $NF}'
+	grep -E "^ +([a-z0-9+.-]+, )*$2(, [a-z0-9+.-]+)* +[0-9][^ ,]*$" "$1/MANIFEST" 2>/dev/null | head -1 | awk '{print $NF}' || true
 }
 need() { [ -n "$2" ] || { echo "no version for $1 in the MANIFEST" >&2; exit 1; }; echo "$2"; }
 GLIBC_VER=$(need libc6-dev-ilp32 "$(manifest_ver "$STAGE" libc6-dev-ilp32)")
@@ -37,9 +39,9 @@ GCC_VER=$(manifest_ver "$CC_STAGE" gcc-14-aarch64-linux-gnu-ilp32)
 GCC_VER=${GCC_VER:-$(need libgcc-s1-ilp32 "$(manifest_ver "$STAGE" libgcc-s1-ilp32)")}
 # The GCC runtime packages the compiler goes with (a "runtime: <version>" line in the compiler's
 # MANIFEST when the compiler was rebuilt alone)
-RT_VER=$(sed -n 's/^ *runtime: *\([^ ]*\).*/\1/p' "$CC_STAGE/MANIFEST" | head -1)
+RT_VER=$(sed -n 's/^ *runtime: *\([^ ]*\).*/\1/p' "$CC_STAGE/MANIFEST" | head -1 || true)
 RT_VER=${RT_VER:-$(need libgcc-s1-ilp32 "$(manifest_ver "$STAGE" libgcc-s1-ilp32)")}
-BIN_VER=$(manifest_ver "$CC_STAGE" binutils-aarch64-linux-gnu-ilp32)
+BIN_VER=${BIN_VER:-$(manifest_ver "$CC_STAGE" binutils-aarch64-linux-gnu-ilp32)}
 KCOMMIT=$(grep -o 'linux-ilp32 ilp32-6.12.y [0-9a-f]*' "$STAGE/MANIFEST" | awk '{print $3}')
 echo "glibc $GLIBC_VER, linux $KVER ($KCOMMIT), gcc $GCC_VER (runtime $RT_VER), binutils ${BIN_VER:-none}"
 # The runtime packages the dev files must match exactly
