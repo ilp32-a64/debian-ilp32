@@ -68,15 +68,15 @@ All are `Architecture: arm64`, except the keyring (`all`):
 | Package | Version | Content |
 |---|---|---|
 | `ilp32-runtime` | 2026.10.27 | metapackage: the five runtime libraries below and the keyring |
-| `libc6-ilp32` | 2.41-12+deb13u4+ilp32a64.1 | Debian's glibc 2.41 with the ILP32 port ([glibc-ilp32](https://github.com/ilp32-a64/glibc-ilp32)) |
+| `libc6-ilp32` | 2.41-12+deb13u4+ilp32a64.2 | Debian's glibc 2.41 with the ILP32 port ([glibc-ilp32](https://github.com/ilp32-a64/glibc-ilp32)) |
 | `libgcc-s1-ilp32`, `libstdc++6-ilp32`, `libatomic1-ilp32`, `libgomp1-ilp32` | 14.2.0-19+ilp32a64.1 | runtime libraries of Debian's `gcc-14` |
 | `linux-image-ilp32-arm64`, `linux-headers-ilp32-arm64` | 6.12.114+ilp32a64.2 | metapackages: the latest kernel and headers |
 | `linux-image-6.12.114-ilp32-arm64`, `linux-headers-6.12.114-ilp32-arm64` | 6.12.114-1+ilp32a64.2 | the kernel and its headers |
 | `ilp32-a64-archive-keyring` | 2026.10.24 | the repository key and apt source |
-| `gcc-aarch64-linux-gnu-ilp32`, `g++-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.2 | metapackages: the compiler commands without version suffix |
-| `gcc-14-aarch64-linux-gnu-ilp32`, `g++-14-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.2 | Debian's `gcc-14` C and C++ compilers for ILP32, running on arm64 |
+| `gcc-aarch64-linux-gnu-ilp32`, `g++-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.3 | metapackages: the compiler commands without version suffix |
+| `gcc-14-aarch64-linux-gnu-ilp32`, `g++-14-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.3 | Debian's `gcc-14` C and C++ compilers for ILP32, running on arm64 |
 | `binutils-aarch64-linux-gnu-ilp32` | 2.44-3+ilp32a64.1 | Debian's binutils for ILP32: assembler, linker and binary tools |
-| `libc6-dev-ilp32` | 2.41-12+deb13u4+ilp32a64.1 | glibc headers, crt files, static libraries and linker scripts |
+| `libc6-dev-ilp32` | 2.41-12+deb13u4+ilp32a64.2 | glibc headers, crt files, static libraries and linker scripts |
 | `linux-libc-dev-ilp32` | 6.12.114-1+ilp32a64.2 | Linux UAPI headers with the ILP32 ABI |
 
 Dynamic linker `/usr/lib/ld-linux-aarch64_ilp32.so.1`, libraries in `/usr/libilp32` (with a
