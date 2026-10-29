@@ -14,7 +14,7 @@ system stays a normal Debian 13 arm64 installation; nothing in Debian is changed
 
 ```
 # 1. the repository (once)
-wget https://github.com/ilp32-a64/debian-ilp32/releases/download/v2026.10.27/ilp32-a64-archive-keyring_2026.10.24_all.deb
+wget https://github.com/ilp32-a64/debian-ilp32/releases/download/v2026.10.30/ilp32-a64-archive-keyring_2026.10.24_all.deb
 sudo apt install ./ilp32-a64-archive-keyring_2026.10.24_all.deb
 sudo apt update
 
@@ -36,15 +36,26 @@ Updates: `sudo apt update && sudo apt upgrade`. New kernel versions come as new 
 (`linux-image-6.12.N-ilp32-arm64`); `linux-image-ilp32-arm64` follows them with `apt upgrade` or
 `apt full-upgrade` (`apt-get upgrade` keeps them back).
 
+2026.10.30 changed the C++ and OpenMP runtime ABI (libstdc++ and libgomp use futexes now, see
+below): rebuild ILP32 programs built with an earlier compiler if they use `std::future`,
+`std::promise`, `std::async`, `std::shared_future`, `atomic::wait`/`notify`, or OpenMP locks.
+C programs and other C++ programs are not affected.
+
 ### Which machines
 
 | Machine | Kernel | Status |
 |---|---|---|
 | UEFI with GRUB (servers, VMs, UEFI boards) | `linux-image-ilp32-arm64` | tested in QEMU |
-| Raspberry Pi 3 Model B+ with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | tested on hardware |
+| Raspberry Pi 3 Model B+ with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | tested on hardware (see below) |
 | Raspberry Pi 4 with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | should work, untested |
 | U-Boot boards with Debian's `u-boot-menu` (extlinux), e.g. the Marvell CN9130 CRB or the Globalscale ESPRESSObin | `linux-image-ilp32-arm64` | tested on hardware (CN9130 CRB; ESPRESSObin v5, 1 GiB) |
 | Boards that need a vendor kernel | the vendor kernel with the [ILP32 patches](https://github.com/ilp32-a64/linux-ilp32) | install `ilp32-runtime` only |
+
+Raspberry Pi: Debian 13's images are linked on the front page of [raspi.debian.net](https://raspi.debian.net/)
+(`debian-13-raspi-arm64` from cloud.debian.org). They grow the root file system but not its
+partition, which stays at about 2.5 GB, and they have no SSH server. Before installing the packages
+above, grow the root partition to the card (for example with `growpart` from `cloud-guest-utils`,
+then `resize2fs`) and install `openssh-server` from the console if you want remote access.
 
 ### About the kernel
 
@@ -69,12 +80,13 @@ All are `Architecture: arm64`, except the keyring (`all`):
 |---|---|---|
 | `ilp32-runtime` | 2026.10.27 | metapackage: the five runtime libraries below and the keyring |
 | `libc6-ilp32` | 2.41-12+deb13u4+ilp32a64.2 | Debian's glibc 2.41 with the ILP32 port ([glibc-ilp32](https://github.com/ilp32-a64/glibc-ilp32)) |
-| `libgcc-s1-ilp32`, `libstdc++6-ilp32`, `libatomic1-ilp32`, `libgomp1-ilp32` | 14.2.0-19+ilp32a64.1 | runtime libraries of Debian's `gcc-14` |
+| `libstdc++6-ilp32`, `libgomp1-ilp32` | 14.2.0-19+ilp32a64.2 | runtime libraries of Debian's `gcc-14` (with futexes) |
+| `libgcc-s1-ilp32`, `libatomic1-ilp32` | 14.2.0-19+ilp32a64.1 | runtime libraries of Debian's `gcc-14` |
 | `linux-image-ilp32-arm64`, `linux-headers-ilp32-arm64` | 6.12.114+ilp32a64.2 | metapackages: the latest kernel and headers |
 | `linux-image-6.12.114-ilp32-arm64`, `linux-headers-6.12.114-ilp32-arm64` | 6.12.114-1+ilp32a64.2 | the kernel and its headers |
 | `ilp32-a64-archive-keyring` | 2026.10.24 | the repository key and apt source |
-| `gcc-aarch64-linux-gnu-ilp32`, `g++-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.3 | metapackages: the compiler commands without version suffix |
-| `gcc-14-aarch64-linux-gnu-ilp32`, `g++-14-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.3 | Debian's `gcc-14` C and C++ compilers for ILP32, running on arm64 |
+| `gcc-aarch64-linux-gnu-ilp32`, `g++-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.4 | metapackages: the compiler commands without version suffix |
+| `gcc-14-aarch64-linux-gnu-ilp32`, `g++-14-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.4 | Debian's `gcc-14` C and C++ compilers for ILP32, running on arm64 |
 | `binutils-aarch64-linux-gnu-ilp32` | 2.44-3+ilp32a64.1 | Debian's binutils for ILP32: assembler, linker and binary tools |
 | `libc6-dev-ilp32` | 2.41-12+deb13u4+ilp32a64.2 | glibc headers, crt files, static libraries and linker scripts |
 | `linux-libc-dev-ilp32` | 6.12.114-1+ilp32a64.2 | Linux UAPI headers with the ILP32 ABI |
@@ -126,6 +138,9 @@ runtime libraries by themselves.
   of `standard` (GCC has no `pac-ret` for ILP32), no memory tagging and no libmvec in glibc, no
   sanitizers, C and C++ only. Debian's `libgomp-omp_h-multilib` patch is left out: it sizes the
   `omp.h` lock types for LP64 multilibs; ILP32 keeps the sizes libgomp's configure measures.
+- Futexes: glibc for ILP32 has only `SYS_futex_time64`, so GCC's configure fell back to the slower
+  POSIX code in libgomp, libitm and libstdc++, and libgomp could hang. Since 2026.10.30, `SYS_futex`
+  is defined as `SYS_futex_time64` where only the latter exists (GCC PR 93421, PR 97182).
 - glibc and GCC's runtime libraries are cross-built on x86-64; binutils and the compiler that runs
   on arm64 are built natively on an arm64 board, the compiler in a fresh Debian 13 chroot against
   the released ILP32 packages of this repository. The build scripts are in
