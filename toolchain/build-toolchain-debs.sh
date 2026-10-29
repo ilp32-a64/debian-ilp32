@@ -21,6 +21,8 @@
 #   GCC_VER   version of the compiler packages (default from the MANIFEST; a higher one repackages
 #             the same trees, e.g. for changed dependencies)
 #   NOTE      an extra line for our changelog entry (what changed in this revision)
+#   RT_DEBS   directory with the GCC runtime .debs the compiler goes with: each runtime dependency
+#             gets the version of its .deb there (when the runtime packages have different revisions)
 #   BIN_VER   version of the released binutils the compiler depends on (with ONLY=compiler, when no
 #             MANIFEST names it)
 set -euo pipefail
@@ -35,7 +37,8 @@ STRIP64=${STRIP64:-$(command -v aarch64-linux-gnu-strip || command -v strip)}
 
 # manifest_ver <stage dir> <package>: the version the MANIFEST gives for a package
 manifest_ver() {
-	grep -E "^ +([a-z0-9+.-]+, )*$2(, [a-z0-9+.-]+)* +[0-9][^ ,]*$" "$1/MANIFEST" 2>/dev/null | head -1 | awk '{print $NF}' || true
+	local re=${2//+/\\+}
+	grep -E "^ +([a-z0-9+.-]+, )*$re(, [a-z0-9+.-]+)* +[0-9][^ ,]*$" "$1/MANIFEST" 2>/dev/null | head -1 | awk '{print $NF}' || true
 }
 need() { [ -n "$2" ] || { echo "no version for $1 in the MANIFEST" >&2; exit 1; }; echo "$2"; }
 GLIBC_VER=$(need libc6-dev-ilp32 "$(manifest_ver "$STAGE" libc6-dev-ilp32)")
@@ -53,7 +56,25 @@ KCOMMIT=$(grep -o 'linux-ilp32 ilp32-6.12.y [0-9a-f]*' "$STAGE/MANIFEST" | awk '
 echo "glibc $GLIBC_VER, linux $KVER (${KCOMMIT:-?}), gcc ${GCC_VER:-none} (runtime ${RT_VER:-none}), binutils ${BIN_VER:-none}"
 # The runtime packages the dev files must match exactly
 RT="libc6-ilp32 (= $GLIBC_VER)"
-GRT="libgcc-s1-ilp32 (= ${RT_VER:-}), libatomic1-ilp32 (= ${RT_VER:-}), libgomp1-ilp32 (= ${RT_VER:-})"
+# rt_ver <package>: the version of a GCC runtime package the compiler depends on exactly
+rt_ver() {
+	local d
+	if [ -n "${RT_DEBS:-}" ]; then
+		d=$(ls "$RT_DEBS"/"$1"_*.deb 2>/dev/null)
+		[ "$(echo "$d" | grep -c .)" = 1 ] || { echo "need exactly one $1 .deb in $RT_DEBS" >&2; exit 1; }
+		dpkg-deb -f "$d" Version
+	else
+		echo "${RT_VER:-}"
+	fi
+}
+if [ "${ONLY:-}" != libc ]; then
+	# (one assignment each, so that a missing .deb stops the build)
+	LIBGCC_VER=$(rt_ver libgcc-s1-ilp32)
+	ATOMIC_VER=$(rt_ver libatomic1-ilp32)
+	GOMP_VER=$(rt_ver libgomp1-ilp32)
+	STDCXX_VER=$(rt_ver libstdc++6-ilp32)
+	GRT="libgcc-s1-ilp32 (= $LIBGCC_VER), libatomic1-ilp32 (= $ATOMIC_VER), libgomp1-ilp32 (= $GOMP_VER)"
+fi
 # doc_file <name>: Debian's copyright or changelog, from the compiler's stage dir or the main one
 doc_file() {
 	if [ -s "$CC_STAGE/doc/$1" ]; then echo "$CC_STAGE/doc/$1"; else echo "$STAGE/doc/$1"; fi
@@ -204,7 +225,7 @@ pkg gcc-14-aarch64-linux-gnu-ilp32 "$GCC_VER" arm64 devel gcc-14 \
 	"Debian's GCC 14 for the AArch64 ILP32 ABI ($T-gcc-14), running on Debian 13 arm64. Programs it builds use the ILP32 runtime in /usr/libilp32 and run on a kernel with the ILP32 ABI." \
 	"$CC_STAGE/gcc-14-aarch64-linux-gnu-ilp32"
 pkg g++-14-aarch64-linux-gnu-ilp32 "$GCC_VER" arm64 devel gcc-14 \
-	"$GXX_DEP, gcc-14-aarch64-linux-gnu-ilp32 (= $GCC_VER), libstdc++6-ilp32 (= $RT_VER)" \
+	"$GXX_DEP, gcc-14-aarch64-linux-gnu-ilp32 (= $GCC_VER), libstdc++6-ilp32 (= $STDCXX_VER)" \
 	"GNU C++ compiler 14 for AArch64 ILP32" \
 	"Debian's G++ 14 for the AArch64 ILP32 ABI ($T-g++-14) and the libstdc++ development files." \
 	"$CC_STAGE/g++-14-aarch64-linux-gnu-ilp32"

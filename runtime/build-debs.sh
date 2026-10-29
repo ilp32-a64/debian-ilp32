@@ -12,6 +12,8 @@
 #   Debian's (doc/glibc.*, doc/gcc-14.*).
 #   STRIP  strip for ILP32 objects (default: aarch64-linux-gnu_ilp32-strip, else aarch64-linux-gnu-strip)
 #   ONLY   "glibc": only libc6-ilp32 (a glibc rebuilt alone; the GCC runtime stays as released)
+#   RT_ONLY  only these GCC runtime packages, e.g. "libstdc++6-ilp32 libgomp1-ilp32" (rebuilt alone;
+#          glibc and the others stay as released); each gets the version the MANIFEST gives for it
 #   NOTE   an extra line for our changelog entry (what changed in this revision)
 set -euo pipefail
 umask 022
@@ -25,19 +27,21 @@ DOC=$STAGE/doc
 # manifest_ver <package>: the version the MANIFEST gives for a package
 manifest_ver() {
 	local v
-	v=$(grep -E "^ +([a-z0-9+.-]+, )*$1(, [a-z0-9+.-]+)* +[0-9][^ ,]*$" "$STAGE/MANIFEST" | head -1 | awk '{print $NF}' || true)
+	local re=${1//+/\\+}
+	v=$(grep -E "^ +([a-z0-9+.-]+, )*$re(, [a-z0-9+.-]+)* +[0-9][^ ,]*$" "$STAGE/MANIFEST" | head -1 | awk '{print $NF}' || true)
 	[ -n "$v" ] || { echo "no version for $1 in $STAGE/MANIFEST" >&2; exit 1; }
 	echo "$v"
 }
-GLIBC_VER=$(manifest_ver libc6-ilp32)
-GLIBC_UP=${GLIBC_VER%%-*}
-DOCS="glibc.copyright glibc.changelog"
-if [ "${ONLY:-}" != glibc ]; then
-	GCC_VER=$(manifest_ver libgcc-s1-ilp32)
-	GCC_UP=${GCC_VER%%-*}
-	DOCS="$DOCS gcc-14.copyright gcc-14.changelog"
+DOCS=""
+if [ -z "${RT_ONLY:-}" ]; then
+	GLIBC_VER=$(manifest_ver libc6-ilp32)
+	DOCS="glibc.copyright glibc.changelog"
 fi
-echo "glibc $GLIBC_VER, GCC ${GCC_VER:-not packaged}, strip $STRIP"
+# the glibc version the GCC runtime needs at least (also when glibc is not packaged here)
+GLIBC_UP=${GLIBC_VER:-2.41-}
+GLIBC_UP=${GLIBC_UP%%-*}
+[ "${ONLY:-}" != glibc ] && DOCS="$DOCS gcc-14.copyright gcc-14.changelog"
+echo "glibc ${GLIBC_VER:-not packaged}, GCC runtime ${RT_ONLY:-all}, strip $STRIP"
 for f in $DOCS; do
 	[ -s "$DOC/$f" ] || { echo "missing $DOC/$f" >&2; exit 1; }
 done
@@ -112,19 +116,27 @@ EOF
 }
 
 # --- libc6-ilp32 ---------------------------------------------------------------
-[ -e "$STAGE/libc6-ilp32/usr/lib/ld-linux-aarch64_ilp32.so.1" ] || { echo "no dynamic linker in the tree" >&2; exit 1; }
-pkg libc6-ilp32 "$GLIBC_VER" glibc "" \
-	"GNU C Library: AArch64 ILP32 shared libraries" \
-	"Debian's GNU C Library $GLIBC_UP for the AArch64 ILP32 ABI (32-bit pointers and long on 64-bit Arm), installed next to the system's LP64 libraries: dynamic linker /usr/lib/ld-linux-aarch64_ilp32.so.1, libraries in /usr/libilp32. Running ILP32 programs needs a kernel with ARM64_ILP32."
+if [ -n "${GLIBC_VER:-}" ]; then
+	[ -e "$STAGE/libc6-ilp32/usr/lib/ld-linux-aarch64_ilp32.so.1" ] || { echo "no dynamic linker in the tree" >&2; exit 1; }
+	pkg libc6-ilp32 "$GLIBC_VER" glibc "" \
+		"GNU C Library: AArch64 ILP32 shared libraries" \
+		"Debian's GNU C Library $GLIBC_UP for the AArch64 ILP32 ABI (32-bit pointers and long on 64-bit Arm), installed next to the system's LP64 libraries: dynamic linker /usr/lib/ld-linux-aarch64_ilp32.so.1, libraries in /usr/libilp32. Running ILP32 programs needs a kernel with ARM64_ILP32."
+fi
 
 [ "${ONLY:-}" = glibc ] && exit 0
 
 # --- GCC runtime libraries -------------------------------------------------------
 LIBC_DEP="libc6-ilp32 (>= $GLIBC_UP)"
+GCC_UP=14.2.0
 # gcc_pkg <package> <depends> <short description>
 gcc_pkg() {
-	pkg "$1" "$GCC_VER" gcc-14 "$2" "$3 (AArch64 ILP32)" \
-		"$3 from Debian's gcc-14 $GCC_UP for the AArch64 ILP32 ABI, installed in /usr/libilp32 next to the system's LP64 libraries."
+	local ver
+	if [ -n "${RT_ONLY:-}" ] && [[ " $RT_ONLY " != *" $1 "* ]]; then
+		return 0
+	fi
+	ver=$(manifest_ver "$1")
+	pkg "$1" "$ver" gcc-14 "$2" "$3 (AArch64 ILP32)" \
+		"$3 from Debian's gcc-14 ${ver%%-*} for the AArch64 ILP32 ABI, installed in /usr/libilp32 next to the system's LP64 libraries."
 }
 gcc_pkg libgcc-s1-ilp32 "$LIBC_DEP" "GCC support library"
 gcc_pkg libstdc++6-ilp32 "$LIBC_DEP, libgcc-s1-ilp32 (>= $GCC_UP)" "GNU Standard C++ Library v3"
