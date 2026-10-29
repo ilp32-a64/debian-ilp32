@@ -51,8 +51,9 @@ check ./exc
 step "C4 OpenMP, libm, libatomic, iconv, NSS"
 check $T-gcc -O2 -fopenmp -o runtime-test $S/runtime-test.c -lm -latomic
 check ./runtime-test
-# omp.h must match libgomp's lock sizes for ILP32 (a Debian patch sized omp_nest_lock_t for LP64):
-# nest locks in a struct with guard words around them, used by several threads
+# omp.h must match libgomp's lock sizes (a mismatch made libgomp write past omp_nest_lock_t): nest
+# locks in a struct with guard words around them, used by several threads; the sizes depend on
+# libgomp's configuration (futex or POSIX), so they are only printed
 cat > nestlock.c <<'EOF'
 #include <omp.h>
 #include <stdio.h>
@@ -63,8 +64,6 @@ int main(void)
 	int n = 0;
 	printf("omp_lock_t %zu/%zu, omp_nest_lock_t %zu/%zu\n", sizeof(omp_lock_t), alignof(omp_lock_t),
 	       sizeof(omp_nest_lock_t), alignof(omp_nest_lock_t));
-	if (sizeof(omp_nest_lock_t) != 24 || alignof(omp_nest_lock_t) != 8)
-		return 1;
 	omp_init_nest_lock(&s.l);
 #pragma omp parallel num_threads(4) reduction(+:n)
 	for (int i = 0; i < 1000; i++) {
