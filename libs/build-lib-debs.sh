@@ -6,6 +6,8 @@
 #   versions:      "  <pkg>, <pkg>  <version>"
 #   packages:      "  <pkg>  section=<section>  desc=<short description>  source=<source>"
 #   dev-depends:   "  <pkg>  <dep>, <dep>"        (the -dev packages' Depends besides their libraries)
+#   depends:       "  <pkg>  <dep>, <dep>"        (optional: runtime Depends no soname shows, e.g. a
+#                                                  plugin package; "(none)" for none)
 # Runtime packages depend on the -ilp32 packages that ship the sonames their ELF objects need
 # (>= the upstream version), found in the .debs of the dirs given; a -dev package depends on the
 # runtime packages of its source at the exact version.
@@ -113,12 +115,15 @@ for p in $PKGS; do
 			case $r in *-dev-ilp32) ;; *) [ "$(field "$r" source)" = "$src" ] && deps="$deps, $r (= $(version "$r"))" ;; esac
 		done
 		extra=$(block dev-depends | awk -v p="$p" '$1 == p { $1 = ""; sub(/^ +/, ""); print; exit }')
-		[ -n "$extra" ] && deps="$deps, $extra"
+		[ -n "$extra" ] && [ "$extra" != "(none)" ] && deps="$deps, $extra"
 		deps=${deps#, }
 		;;
 	*)
 		deps=$(shlib_deps "$D" "$src" "$p")
 		case $deps in *MISSING:*) echo "$p: unresolved sonames: $deps" >&2; exit 1 ;; esac
+		# Depends that no soname shows (plugins, data), from the MANIFEST's "depends:" block
+		extra=$(block depends | awk -v p="$p" '$1 == p { $1 = ""; sub(/^ +/, ""); print; exit }')
+		[ -n "$extra" ] && [ "$extra" != "(none)" ] && deps="${deps:+$deps, }$extra"
 		;;
 	esac
 	mkdir -p "$D/DEBIAN" "$D/usr/share/doc/$p"
