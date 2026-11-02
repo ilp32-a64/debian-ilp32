@@ -114,9 +114,21 @@ for p in $PKGS; do
 	find "$D" -depth -type d -name __pycache__ -exec rm -rf {} +
 	case $p in
 	*-dev-ilp32)
-		deps=""
+		# the libraries its .so links point to (all of the source's, if it has no links)
+		deps="" libs=""
+		for l in $(find "$SNAP/$p" -type l -name '*.so' -printf '%l\n' | sed 's|.*/||' | sort -u); do
+			for r in $PKGS; do
+				case $r in *-dev-ilp32) continue ;; esac
+				[ -n "$(find "$SNAP/$r" -name "$l" -print -quit)" ] && libs="$libs $r"
+			done
+		done
+		if [ -z "$libs" ]; then
+			for r in $PKGS; do
+				case $r in *-dev-ilp32) ;; *) [ "$(field "$r" source)" = "$src" ] && libs="$libs $r" ;; esac
+			done
+		fi
 		for r in $PKGS; do
-			case $r in *-dev-ilp32) ;; *) [ "$(field "$r" source)" = "$src" ] && deps="$deps, $r (= $(version "$r"))" ;; esac
+			[[ " $libs " == *" $r "* ]] && deps="$deps, $r (= $(version "$r"))"
 		done
 		extra=$(block dev-depends | awk -v p="$p" '$1 == p { $1 = ""; sub(/^ +/, ""); print; exit }')
 		if [ -n "$extra" ] && [ "$extra" != "(none)" ]; then
