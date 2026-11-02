@@ -144,8 +144,10 @@ for p in $PKGS; do
 	*)
 		deps=$(shlib_deps "$D" "$src" "$p")
 		case $deps in *MISSING:*) echo "$p: unresolved sonames: $deps" >&2; exit 1 ;; esac
-		# Depends that no soname shows (plugins, data), from the MANIFEST's "depends:" block
+		# Depends that no soname shows (plugins, data, metapackages), from the MANIFEST's "depends:"
+		# block or maint/<package>.depends
 		extra=$(block depends | awk -v p="$p" '$1 == p { $1 = ""; sub(/^ +/, ""); print; exit }')
+		[ -f "$HERE/maint/$p.depends" ] && extra=$(grep -v '^[[:space:]]*\(#\|$\)' "$HERE/maint/$p.depends" | paste -sd, | sed 's/,/, /g')
 		[ -n "$extra" ] && [ "$extra" != "(none)" ] && deps="${deps:+$deps, }$extra"
 		;;
 	esac

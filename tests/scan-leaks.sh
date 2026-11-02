@@ -31,6 +31,11 @@ ALLOW_UPSTREAM=(
 	"/home/jd/Documents/dev/kernel-module-flake/linux-6.1/outputs/dev/lib/modules/6.1.0-development/source/scripts/rust_is_available_bindgen_libclang.h"
 	# libsqlite3-dev: sqlite3.h's documentation of file: URIs
 	"/home/fred/data.db"
+	# python3.13: the stdlib's tables of special networks (ipaddress.py) and a docstring example
+	"100.64.0.0/10"
+	"IPv4Network('192.168.0.0/16')"
+	"IPv4Network('172.16.0.0/12')"
+	"www.example.com;*.example.net; 192.168.0.1"
 )
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT

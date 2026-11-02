@@ -1,0 +1,2 @@
+# the default ILP32 Python, as Debian's python3 depends on python3.13
+python3.13-ilp32 (>= 3.13.5)
