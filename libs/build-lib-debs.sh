@@ -154,6 +154,12 @@ for p in $PKGS; do
 	for s in preinst postinst prerm postrm; do
 		[ -f "$HERE/maint/$p.$s" ] && install -m 0755 "$HERE/maint/$p.$s" "$D/DEBIAN/$s"
 	done
+	# empty directories the package owns (maint/<package>.dirs, one per line), like dh_installdirs
+	if [ -f "$HERE/maint/$p.dirs" ]; then
+		grep -v '^[[:space:]]*\(#\|$\)' "$HERE/maint/$p.dirs" | while IFS= read -r d; do
+			install -d -m 0755 "$D/${d#/}"
+		done
+	fi
 	{
 		cat <<EOF
 $p ($ver) trixie; urgency=medium

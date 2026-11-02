@@ -1,0 +1,2 @@
+# the ILP32 site directory for Debian-packaged Python modules, as python3 ships /usr/lib/python3/dist-packages
+/usr/libilp32/python3/dist-packages
