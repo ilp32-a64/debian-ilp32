@@ -3,7 +3,8 @@
 # Python test inside Debian 13 arm64 on the ILP32 kernel (see run-python-test.sh): install the
 # ILP32 runtime, compiler and CPython set with apt, then check the interpreter, its modules and
 # libraries, a C extension built against python3.13-dev-ilp32, and pip's platform tags.
-# Usage: guest-python-test.sh <Debian mirror>
+# Usage: guest-python-test.sh <Debian mirror>      (QEMU guest)
+#        BOARD=1 DEBS=<dir> guest-python-test.sh    (a real Debian 13 arm64 board with an ILP32 kernel)
 T=aarch64-linux-gnu_ilp32
 PY=python3-ilp32
 B=/root/pytest
@@ -17,16 +18,20 @@ expect() {
 	if echo "$out" | grep -qE "$pat"; then echo "RESULT ok: $what"; else echo "RESULT FAIL: $what"; echo "$out" | tail -8; fi
 }
 
-step "P1 install with apt (Debian's python3-pip from $1, for the pip checks)"
-ip link set lo up
-dev=$(ls /sys/class/net | grep -v lo | head -1)
-ip link set "$dev" up && ip addr add 10.0.2.15/24 dev "$dev" && ip route add default via 10.0.2.2
-echo "nameserver 10.0.2.3" > /etc/resolv.conf
-# POSIX semaphores (multiprocessing) need /dev/shm, which the test init does not mount
-mkdir -p /dev/shm && mount -t tmpfs tmpfs /dev/shm
-echo "deb $1 trixie main" > /etc/apt/sources.list
+step "P1 install with apt (Debian's python3-pip from ${1:-the system sources}, for the pip checks)"
+# On a real board (BOARD=1) the network, /dev/shm and the apt sources are the system's own.
+if [ -z "${BOARD:-}" ]; then
+	ip link set lo up
+	dev=$(ls /sys/class/net | grep -v lo | head -1)
+	ip link set "$dev" up && ip addr add 10.0.2.15/24 dev "$dev" && ip route add default via 10.0.2.2
+	echo "nameserver 10.0.2.3" > /etc/resolv.conf
+	# POSIX semaphores (multiprocessing) need /dev/shm, which the test init does not mount
+	mkdir -p /dev/shm && mount -t tmpfs tmpfs /dev/shm
+	echo "deb $1 trixie main" > /etc/apt/sources.list
+fi
+DEBS=${DEBS:-/ilp32-test/debs}
 check apt-get update -q
-check apt-get install -y -q --no-install-recommends /ilp32-test/debs/*.deb python3-pip
+check apt-get install -y -q --no-install-recommends "$DEBS"/*.deb python3-pip
 dpkg -l '*-ilp32' | grep '^ii' | awk '{print "INFO", $2, $3}'
 mkdir -p $B && cd $B
 
@@ -114,6 +119,6 @@ unset PYTHONPATH
 step "P6 remove and reinstall"
 check apt-get remove -y -q python3-ilp32 python3.13-ilp32 python3.13-dev-ilp32
 check sh -c "! find /usr/libilp32/python3.13 -name '*.pyc' 2>/dev/null | grep -q ."
-check apt-get install -y -q --no-install-recommends /ilp32-test/debs/python3*.deb
+check apt-get install -y -q --no-install-recommends "$DEBS"/python3*.deb
 check $PY -c 'import ssl, sqlite3'
 check dpkg --audit
