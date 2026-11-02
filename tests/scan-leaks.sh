@@ -29,6 +29,8 @@ PRIVATE=${LEAK_PATTERNS:-$HOME/.config/debian-ilp32/leak-patterns}
 ALLOW_UPSTREAM=(
 	# linux-headers: scripts/rust_is_available_test.py, sample compiler output in upstream test data
 	"/home/jd/Documents/dev/kernel-module-flake/linux-6.1/outputs/dev/lib/modules/6.1.0-development/source/scripts/rust_is_available_bindgen_libclang.h"
+	# libsqlite3-dev: sqlite3.h's documentation of file: URIs
+	"/home/fred/data.db"
 )
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
