@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Remove the local site directory if it is empty (as Debian's python3.13-minimal does).
+set -e
+if [ "$1" = remove ] || [ "$1" = purge ]; then
+	rmdir /usr/local/libilp32/python3.13/dist-packages /usr/local/libilp32/python3.13 /usr/local/libilp32 2>/dev/null || true
+fi
+exit 0

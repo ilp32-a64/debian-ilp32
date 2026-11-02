@@ -1,8 +1,16 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
-# Byte-compile the ILP32 standard library, as Debian does in python3.13-minimal's postinst.
+# As Debian's python3.13-minimal: create the local site directory (group staff, if /usr/local is
+# writable) and byte-compile the standard library, here for the ILP32 interpreter.
 set -e
-if [ "$1" = configure ] && [ -x /usr/bin/python3.13-ilp32 ]; then
-	/usr/bin/python3.13-ilp32 -E -S -m compileall -q -j0 -x "/(test|lib2to3/tests|idlelib/idle_test)/" /usr/libilp32/python3.13 >/dev/null 2>&1 || true
+if [ "$1" = configure ]; then
+	d=/usr/local/libilp32/python3.13
+	if [ ! -e "$d/dist-packages" ] && mkdir -p "$d/dist-packages" 2>/dev/null; then
+		chmod 2775 /usr/local/libilp32 "$d" "$d/dist-packages" 2>/dev/null || true
+		chown root:staff /usr/local/libilp32 "$d" "$d/dist-packages" 2>/dev/null || true
+	fi
+	if [ -x /usr/bin/python3.13-ilp32 ]; then
+		/usr/bin/python3.13-ilp32 -E -S -m compileall -q -j0 -x "/(test|lib2to3/tests|idlelib/idle_test)/" /usr/libilp32/python3.13 >/dev/null 2>&1 || true
+	fi
 fi
 exit 0
