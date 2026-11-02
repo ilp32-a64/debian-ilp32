@@ -119,7 +119,14 @@ for p in $PKGS; do
 			case $r in *-dev-ilp32) ;; *) [ "$(field "$r" source)" = "$src" ] && deps="$deps, $r (= $(version "$r"))" ;; esac
 		done
 		extra=$(block dev-depends | awk -v p="$p" '$1 == p { $1 = ""; sub(/^ +/, ""); print; exit }')
-		[ -n "$extra" ] && [ "$extra" != "(none)" ] && deps="$deps, $extra"
+		if [ -n "$extra" ] && [ "$extra" != "(none)" ]; then
+			# the libraries of the same source are already there, at their exact version
+			IFS=',' read -ra items <<< "$extra"
+			for e in "${items[@]}"; do
+				e=$(echo "$e" | sed 's/^ *//; s/ *$//')
+				[[ ", $deps, " == *", ${e%% *} ("* ]] || deps="$deps, $e"
+			done
+		fi
 		deps=${deps#, }
 		;;
 	*)
