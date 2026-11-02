@@ -22,6 +22,8 @@ T=aarch64-linux-gnu_ilp32
 STRIP=${STRIP:-$(command -v $T-strip || command -v aarch64-linux-gnu-strip)}
 MAINT="liviyifan <344781483+liviyifan@users.noreply.github.com>"
 M=$SNAP/MANIFEST
+# maintainer scripts: maint/<package>.{preinst,postinst,prerm,postrm} next to this script
+HERE=$(dirname "$(realpath "$0")")
 
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
@@ -108,6 +110,8 @@ for p in $PKGS; do
 	cp -a "$SNAP/$p"/. "$D"/
 	chmod -R u+rwX,go-w,go+rX "$D"
 	strip_tree "$D"
+	# Python byte code is compiled on the machine (maintainer scripts), as in Debian
+	find "$D" -depth -type d -name __pycache__ -exec rm -rf {} +
 	case $p in
 	*-dev-ilp32)
 		deps=""
@@ -128,6 +132,9 @@ for p in $PKGS; do
 	esac
 	mkdir -p "$D/DEBIAN" "$D/usr/share/doc/$p"
 	cp "$SNAP/doc/$src.copyright" "$D/usr/share/doc/$p/copyright"
+	for s in preinst postinst prerm postrm; do
+		[ -f "$HERE/maint/$p.$s" ] && install -m 0755 "$HERE/maint/$p.$s" "$D/DEBIAN/$s"
+	done
 	{
 		cat <<EOF
 $p ($ver) trixie; urgency=medium

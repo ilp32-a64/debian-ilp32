@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Remove the byte-compiled files of the ILP32 standard library.
+set -e
+if [ "$1" = remove ] || [ "$1" = upgrade ] || [ "$1" = deconfigure ]; then
+	find /usr/libilp32/python3.13 -depth -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+fi
+exit 0

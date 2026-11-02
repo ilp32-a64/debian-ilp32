@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Byte-compile the ILP32 standard library, as Debian does in python3.13-minimal's postinst.
+set -e
+if [ "$1" = configure ] && [ -x /usr/bin/python3.13-ilp32 ]; then
+	/usr/bin/python3.13-ilp32 -E -S -m compileall -q -j0 -x "/(test|lib2to3/tests|idlelib/idle_test)/" /usr/libilp32/python3.13 >/dev/null 2>&1 || true
+fi
+exit 0
