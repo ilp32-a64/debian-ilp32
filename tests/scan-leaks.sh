@@ -89,18 +89,18 @@ for deb in "$DEBS"/*.deb; do
 	*)
 		cp "$W/files" "$W/own"
 		: > "$W/upstream"
-		# Packages built from a Debian source (Source: <source>-ilp32) carry Debian's copyright
-		# file and the Debian changelog entry, with upstream authors' addresses: those are
-		# upstream content; our own changelog entry (the first one) stays ours
+		# Packages built from a Debian source (Source: <source>-ilp32: glibc, the GCC runtime, the
+		# libraries of the CPython set) are upstream content like the toolchain packages: files,
+		# headers, Debian's copyright and Debian's changelog entry name upstream authors with their
+		# own addresses. Ours are DEBIAN/ and our changelog entry (the first one).
 		if grep -q '^Source: .*-ilp32$' DEBIAN/control; then
+			grep '^\./DEBIAN/' "$W/files" > "$W/own" || true
 			for c in ./usr/share/doc/*/changelog.Debian.gz.unpacked; do
 				[ -f "$c" ] || continue
 				awk '{ print } /^ -- / { exit }' "$c" > "$c.ours"
 				echo "$c.ours" >> "$W/own"
 			done
-			grep -E '^\./usr/share/doc/[^/]+/(copyright|changelog\.Debian\.gz(\.unpacked)?)$' "$W/files" > "$W/upstream" || true
-			grep -v -x -F -f "$W/upstream" "$W/own" > "$W/own2" || true
-			mv "$W/own2" "$W/own"
+			grep -v '^\./DEBIAN/' "$W/files" > "$W/upstream" || true
 		fi
 		;;
 	esac
