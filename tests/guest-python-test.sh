@@ -125,6 +125,13 @@ check venv/bin/python -m pip install --no-index --find-links /usr/share/python-w
 expect "setuptools imports in the venv" '^ok ' venv/bin/python -c 'import setuptools, sys; print("ok", setuptools.__file__)'
 expect "venv site-packages in the venv" "$B/venv/lib" venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"], sysconfig.get_paths()["platlib"])'
 venv/bin/python -c 'import sysconfig; print("INFO venv purelib", sysconfig.get_path("purelib")); print("INFO venv platlib", sysconfig.get_path("platlib"))'
+# as venv links lib64 -> lib on 64-bit, ILP32 venvs link libilp32 -> lib (python3.13-ilp32 patch 0007),
+# so code that looks only at platlib finds what pip put into purelib
+check test "$(readlink venv/libilp32)" = lib
+expect "venv platlib and purelib are one directory" '^same$' venv/bin/python -c '
+import os, sysconfig
+p = sysconfig.get_paths()
+print("same" if os.path.realpath(p["platlib"]) == os.path.realpath(p["purelib"]) else "different")'
 # a C extension built and installed with pip in the venv (as users do), imported from the venv
 mkdir -p ham && cp spam.c ham/spam.c
 cat > ham/setup.py <<'EOF'
