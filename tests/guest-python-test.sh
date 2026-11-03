@@ -31,7 +31,7 @@ if [ -z "${BOARD:-}" ]; then
 fi
 DEBS=${DEBS:-/ilp32-test/debs}
 check apt-get update -q
-check apt-get install -y -q --no-install-recommends "$DEBS"/*.deb python3-pip
+check apt-get install -y -q --no-install-recommends "$DEBS"/*.deb python3-pip python3-pip-whl python3-setuptools-whl
 dpkg -l '*-ilp32' | grep '^ii' | awk '{print "INFO", $2, $3}'
 mkdir -p $B && cd $B
 
@@ -115,6 +115,15 @@ expect "linux_aarch64_ilp32 tag" 'linux_aarch64_ilp32' echo "$out"
 touch x-1.0-py3-none-linux_armv7l.whl
 expect "armv7l wheel refused" 'not a supported wheel' $PY -m pip install --no-index --target t ./x-1.0-py3-none-linux_armv7l.whl
 unset PYTHONPATH
+
+step "P5b venv, ensurepip and pip in the venv (Debian's wheels in /usr/share/python-wheels)"
+rm -rf venv
+check $PY -m venv venv
+check venv/bin/python -m pip --version
+# a pure-Python package from Debian's wheels; it must import from the venv's own site-packages
+check venv/bin/python -m pip install --no-index --find-links /usr/share/python-wheels setuptools
+expect "setuptools imports in the venv" '^ok ' venv/bin/python -c 'import setuptools, sys; print("ok", setuptools.__file__)'
+expect "venv site-packages in the venv" "$B/venv/lib" venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"], sysconfig.get_paths()["platlib"])'
 
 step "P6 remove and reinstall"
 check apt-get remove -y -q python3-ilp32 python3.13-ilp32 python3.13-dev-ilp32
