@@ -67,6 +67,11 @@ expect "md4 from the legacy provider" '^31d6cfe0d16ae931b73c59d7e0c089c0$' env O
 echo "INFO md4 with the default configuration: ILP32 $($PY -c 'import hashlib; hashlib.new("md4")' >/dev/null 2>&1 && echo yes || echo no), Debian's python3 $(python3 -c 'import hashlib; hashlib.new("md4")' >/dev/null 2>&1 && echo yes || echo no)"
 expect "sqlite 3.46" '^3\.46' $PY -c 'import sqlite3; print(sqlite3.sqlite_version)'
 expect "ctypes calls libc" '^5$' $PY -c 'import ctypes; print(ctypes.CDLL(None).strlen(b"hello"))'
+# ctypes.util.find_library must find the ILP32 libraries (it parses ldconfig's cache and falls back
+# to gcc/ld); many packages load libraries this way
+for l in c z ssl sqlite3 ffi; do
+	expect "find_library($l)" '^lib.*\.so' $PY -c "import ctypes.util; print(ctypes.util.find_library('$l'))"
+done
 expect "lzma/bz2/zlib round trip" '^ok$' $PY -c '
 import lzma, bz2, zlib
 d = b"x" * 100000
