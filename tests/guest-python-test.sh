@@ -72,6 +72,13 @@ expect "ctypes calls libc" '^5$' $PY -c 'import ctypes; print(ctypes.CDLL(None).
 for l in c z ssl sqlite3 ffi; do
 	expect "find_library($l)" '^lib.*\.so' $PY -c "import ctypes.util; print(ctypes.util.find_library('$l'))"
 done
+# an ILP32 library that is only on LD_LIBRARY_PATH is found; a library that exists only for LP64
+# (Debian's libapt-pkg, no ILP32 package) is not
+mkdir -p ldp
+echo 'int ilp32only(void) { return 32; }' > ldp/x.c
+$T-gcc -O2 -fPIC -shared -Wl,-soname,libilp32only.so.1 -o ldp/libilp32only.so.1 ldp/x.c && ln -sf libilp32only.so.1 ldp/libilp32only.so
+expect "find_library on LD_LIBRARY_PATH" '^libilp32only\.so' env LD_LIBRARY_PATH=$B/ldp $PY -c "import ctypes.util; print(ctypes.util.find_library('ilp32only'))"
+expect "find_library of an LP64-only library" '^None$' $PY -c "import ctypes.util; print(ctypes.util.find_library('apt-pkg'))"
 expect "lzma/bz2/zlib round trip" '^ok$' $PY -c '
 import lzma, bz2, zlib
 d = b"x" * 100000
