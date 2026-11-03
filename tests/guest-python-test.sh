@@ -124,6 +124,15 @@ check venv/bin/python -m pip --version
 check venv/bin/python -m pip install --no-index --find-links /usr/share/python-wheels setuptools
 expect "setuptools imports in the venv" '^ok ' venv/bin/python -c 'import setuptools, sys; print("ok", setuptools.__file__)'
 expect "venv site-packages in the venv" "$B/venv/lib" venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"], sysconfig.get_paths()["platlib"])'
+venv/bin/python -c 'import sysconfig; print("INFO venv purelib", sysconfig.get_path("purelib")); print("INFO venv platlib", sysconfig.get_path("platlib"))'
+# a C extension built and installed with pip in the venv (as users do), imported from the venv
+mkdir -p ham && cp spam.c ham/spam.c
+cat > ham/setup.py <<'EOF'
+from setuptools import setup, Extension
+setup(name="spam", version="1.0", ext_modules=[Extension("spam", ["spam.c"])])
+EOF
+check venv/bin/python -m pip install --no-index --no-build-isolation ./ham
+expect "C extension from pip imports in the venv" '^4 ' sh -c 'cd / && '"$B"'/venv/bin/python -c "import spam; print(spam.size(), spam.__file__)"'
 
 step "P6 remove and reinstall"
 check apt-get remove -y -q python3-ilp32 python3.13-ilp32 python3.13-dev-ilp32
