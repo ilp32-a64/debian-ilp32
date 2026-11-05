@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+# The fragments do nothing from here on (conffiles stay until purge). u-boot-menu regenerates by
+# its trigger on /usr/share/u-boot-menu/conf.d.
+if [ "$1" = remove ]; then
+	if command -v update-grub > /dev/null && [ -e /boot/grub/grub.cfg ] &&
+		! { command -v systemd-detect-virt > /dev/null && systemd-detect-virt --quiet --container; }; then
+		update-grub || echo "ilp32-kernel: update-grub failed" >&2
+	fi
+	z50=/etc/kernel/postinst.d/z50-raspi-firmware
+	if [ -d /usr/lib/raspi-firmware ] && [ -x "$z50" ]; then
+		DEB_MAINT_PARAMS=configure "$z50" || echo "ilp32-kernel: $z50 failed" >&2
+	fi
+fi
+exit 0

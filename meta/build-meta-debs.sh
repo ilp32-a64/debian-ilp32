@@ -34,10 +34,18 @@ W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 mkdir -p "$OUT"
 
-# meta <package> <version> <section> <depends> <suggests> <short> <long>
+# meta <package> <version> <section> <depends> <suggests> <short> <long> [extra dir]
+# The extra dir has root/ (installed files; those in etc/ become conffiles), DEBIAN/ (maintainer
+# scripts, triggers) and README.md.
 meta() {
-	local name=$1 ver=$2 section=$3 deps=$4 suggests=$5 short=$6 long=$7 D=$W/$1
+	local name=$1 ver=$2 section=$3 deps=$4 suggests=$5 short=$6 long=$7 extra=${8:-} D=$W/$1
 	mkdir -p "$D/DEBIAN" "$D/usr/share/doc/$name"
+	if [ -n "$extra" ]; then
+		cp -R "$extra/root/." "$D/"
+		cp "$extra"/DEBIAN/* "$D/DEBIAN/"
+		cp "$extra/README.md" "$D/usr/share/doc/$name/README.boot-default.md"
+		(cd "$D" && find etc -type f -printf '/%p\n' | sort > DEBIAN/conffiles)
+	fi
 	cat <<EOF | gzip -9n > "$D/usr/share/doc/$name/changelog.Debian.gz"
 $name ($ver) trixie; urgency=medium
 
@@ -69,15 +77,16 @@ EOF
 		echo "Description: $short"
 		echo "$long" | fold -s -w 72 | sed 's/ *$//; s/^/ /'
 	} > "$D/DEBIAN/control"
-	(cd "$D" && find . -path ./DEBIAN -prune -o -type f -printf '%P\0' | sort -z |
+	(cd "$D" && find . \( -path ./DEBIAN -o -path ./etc \) -prune -o -type f -printf '%P\0' | sort -z |
 		xargs -0r md5sum > DEBIAN/md5sums)
 	dpkg-deb --root-owner-group -Zxz --build "$D" "$OUT/${name}_${ver}_arm64.deb" >/dev/null
 	echo "built $OUT/${name}_${ver}_arm64.deb"
 }
 
-meta "linux-image-$FLAVOUR" "$MVER" kernel "$KPKG (= $KVER)" "" \
+meta "linux-image-$FLAVOUR" "$MVER" kernel "$KPKG (= $KVER), linux-base" "" \
 	"Linux kernel with AArch64 ILP32 support (latest)" \
-	"Depends on the latest kernel with the AArch64 ILP32 ABI from the ILP32-A64 repository, so that apt upgrade installs new kernel versions."
+	"Depends on the latest kernel with the AArch64 ILP32 ABI from the ILP32-A64 repository, so that apt upgrade installs new kernel versions, and keeps the newest ILP32 kernel as the default boot entry when a kernel with a higher version is installed. ILP32_KERNEL_DEFAULT=no in /etc/default/ilp32-kernel turns that off." \
+	"$(dirname "$(realpath "$0")")/boot-default"
 meta "linux-headers-$FLAVOUR" "$MVER" kernel "$HPKG (= $KVER)" "" \
 	"Headers for the Linux kernel with AArch64 ILP32 support (latest)" \
 	"Depends on the headers of the latest kernel with the AArch64 ILP32 ABI from the ILP32-A64 repository."

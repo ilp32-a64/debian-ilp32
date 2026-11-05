@@ -1,0 +1,9 @@
+# Boot the newest ILP32 kernel by default (package linux-image-ilp32-arm64).
+#
+# With "no", the boot configuration follows the system's normal rule, which is usually the kernel
+# with the highest version; ILP32 programs do not run on a kernel without the ILP32 ABI. Run
+# ilp32-kernel-update-boot after changing this.
+#
+# With "yes", the system does not boot Debian's kernel updates, including security updates, until
+# a newer ILP32 kernel package follows them.
+ILP32_KERNEL_DEFAULT=yes

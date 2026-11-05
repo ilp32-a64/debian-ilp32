@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+# apt removes this package before the kernel it depends on, so the hooks are gone when z50 points
+# config.txt at the remaining kernel, which it does not copy in remove mode.
+if [ "$1" = remove ]; then
+	/usr/lib/ilp32-kernel/raspi-apply --fallback || true
+fi
+exit 0

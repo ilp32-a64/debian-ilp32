@@ -1,0 +1,7 @@
+#!/bin/sh
+# Raspberry Pi: update-initramfs runs z50-raspi-firmware from this directory too. During a kernel
+# hook it does not, and the kernel hooks run later. After the package is removed this does nothing.
+[ -z "${INITRAMFS_TOOLS_KERNEL_HOOK:-}" ] || exit 0
+[ -x /usr/lib/ilp32-kernel/raspi-apply ] || exit 0
+/usr/lib/ilp32-kernel/raspi-apply || true
+exit 0

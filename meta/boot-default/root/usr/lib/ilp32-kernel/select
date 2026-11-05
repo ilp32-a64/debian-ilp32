@@ -1,0 +1,72 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Choose kernels for the boot configuration. Boot configuration tools source fragments that call
+# this while running under "set -e", so nothing here may stop them: it prints nothing and exits 0
+# when it has no answer. Only --enabled uses its exit status.
+#   select                 the newest ILP32 kernel release with an initrd, if the feature is on
+#   select --enabled       exit 0 unless /etc/default/ilp32-kernel says ILP32_KERNEL_DEFAULT=no
+#   select --other         the newest other kernel release with an initrd
+#   select --u-boot-label <U_BOOT_ENTRIES> <U_BOOT_ALTERNATIVES>
+#                          the extlinux label of the ILP32 kernel, if u-boot-update writes it
+conf=/etc/default/ilp32-kernel
+
+enabled() {
+	[ -r "$conf" ] || return 0
+	value=$(sed -n 's/^[[:space:]]*ILP32_KERNEL_DEFAULT=//p' "$conf" | tail -n 1 | tr -d "\"' \t")
+	[ "$value" != no ]
+}
+
+# The order u-boot-update uses for its labels.
+kernels() {
+	linux-version list 2>/dev/null | linux-version sort --reverse 2>/dev/null
+}
+
+# newest [-v]: without an initrd a kernel does not boot, and a kernel that is unpacked but not yet
+# configured has none yet; its own postinst runs the hooks again later.
+newest() {
+	for release in $(kernels | grep $1 -e '-ilp32-arm64$'); do
+		if [ -e "/boot/initrd.img-$release" ]; then
+			echo "$release"
+			return 0
+		fi
+	done
+	return 0
+}
+
+ilp32() {
+	if enabled; then
+		newest ""
+	fi
+}
+
+case "${1:-}" in
+--enabled)
+	enabled
+	exit $?
+	;;
+--other)
+	newest -v
+	;;
+--u-boot-label)
+	release=$(ilp32)
+	[ -n "$release" ] || exit 0
+	case "${3:-default}" in
+	*default*) ;;
+	*) exit 0 ;;
+	esac
+	index=0
+	for kernel in $(kernels); do
+		[ "$kernel" != "$release" ] || break
+		index=$((index + 1))
+	done
+	case "${2:-all}" in
+	'' | *[!0-9]*) ;;
+	*) [ "$index" -lt "$2" ] || exit 0 ;;
+	esac
+	echo "l$index"
+	;;
+*)
+	ilp32
+	;;
+esac
+exit 0

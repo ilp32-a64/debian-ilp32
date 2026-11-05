@@ -1,0 +1,23 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Regenerate the boot configuration with the tools this system has, for example after changing
+# /etc/default/ilp32-kernel.
+if [ "$(id -u)" != 0 ]; then
+	echo "ilp32-kernel-update-boot: must run as root" >&2
+	exit 1
+fi
+rc=0
+# As Debian's zz-update-grub: not in a container.
+if command -v update-grub > /dev/null && [ -e /boot/grub/grub.cfg ] &&
+	! { command -v systemd-detect-virt > /dev/null && systemd-detect-virt --quiet --container; }; then
+	update-grub || rc=1
+fi
+if [ -x /usr/sbin/u-boot-update ] && [ -e /boot/extlinux/extlinux.conf ]; then
+	u-boot-update || rc=1
+fi
+z50=/etc/kernel/postinst.d/z50-raspi-firmware
+if [ -d /usr/lib/raspi-firmware ] && [ -x "$z50" ]; then
+	DEB_MAINT_PARAMS=configure "$z50" || rc=1
+	/usr/lib/ilp32-kernel/raspi-apply || rc=1
+fi
+exit $rc

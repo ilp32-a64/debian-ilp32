@@ -1,0 +1,11 @@
+#!/bin/sh
+# Raspberry Pi: runs after z50-raspi-firmware, whose result it changes; see raspi-apply. After the
+# package is removed this does nothing. It must not stop a kernel installation or removal.
+[ -x /usr/lib/ilp32-kernel/raspi-apply ] || exit 0
+eval set -- "${DEB_MAINT_PARAMS:-}"
+case "${1:-}" in
+configure | remove)
+	/usr/lib/ilp32-kernel/raspi-apply || true
+	;;
+esac
+exit 0

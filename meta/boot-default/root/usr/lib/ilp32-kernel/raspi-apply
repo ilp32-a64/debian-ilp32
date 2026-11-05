@@ -1,0 +1,89 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Raspberry Pi: raspi-firmware's z50-raspi-firmware hook points config.txt at the kernel with the
+# highest version and has no setting to choose another one, so this runs after it and changes the
+# result. The steps: keep the newest other kernel on the firmware partition (the way back), copy
+# the ILP32 kernel, then change the kernel= and initramfs lines. A failure leaves config.txt as
+# z50 wrote it, which boots that kernel. Nothing is stored: running z50 again restores its output.
+#   raspi-apply             as above
+#   raspi-apply --fallback  only keep the newest other kernel on the firmware partition: in remove
+#                           mode z50 points config.txt at the remaining kernel without copying it
+fw=/boot/firmware
+cfg=$fw/config.txt
+sel=/usr/lib/ilp32-kernel/select
+tmp=$fw/.ilp32-kernel.tmp
+
+warn() {
+	echo "ilp32-kernel: $*" >&2
+}
+
+# put <file>...: copy files to the firmware partition, or nothing if they do not all fit
+put() {
+	need=0
+	for file in "$@"; do
+		cmp -s "$file" "$fw/$(basename "$file")" && continue
+		need=$((need + $(du -k "$file" | cut -f1)))
+	done
+	[ "$need" -gt 0 ] || return 0
+	need=$((need + 4096))
+	free=$(df -Pk "$fw" | awk 'END { print $4 }')
+	if [ "$need" -gt "$free" ]; then
+		warn "not enough space on $fw: $need kB needed, $free kB free"
+		return 1
+	fi
+	for file in "$@"; do
+		target=$fw/$(basename "$file")
+		cmp -s "$file" "$target" && continue
+		if ! { cp "$file" "$tmp" && mv "$tmp" "$target"; }; then
+			rm -f "$tmp"
+			warn "cannot copy $file to $fw"
+			return 1
+		fi
+	done
+}
+
+fallback() {
+	release=$("$sel" --other)
+	[ -n "$release" ] || return 0
+	put "/boot/vmlinuz-$release" "/boot/initrd.img-$release"
+}
+
+# The firmware partition not mounted: the same check as z50, which fails there. That failure is
+# raspi-firmware's and stays the only one; dpkg --configure runs the hooks again once it is mounted.
+if ! ischroot && ! { [ -e /usr/bin/systemd-detect-virt ] && systemd-detect-virt -q; } &&
+	! mountpoint -q "$fw"; then
+	exit 0
+fi
+# Only a config.txt written by z50 in its automatic mode (not KERNEL=<name>, as with U-Boot).
+[ -d /usr/lib/raspi-firmware ] && [ -f "$cfg" ] || exit 0
+grep -q '^kernel=vmlinuz-' "$cfg" || exit 0
+
+if [ "${1:-}" = --fallback ]; then
+	fallback
+	exit 0
+fi
+"$sel" --enabled || exit 0
+if ! fallback; then
+	warn "the boot configuration keeps the kernel chosen by raspi-firmware"
+	exit 0
+fi
+release=$("$sel")
+[ -n "$release" ] || exit 0
+
+set -- "/boot/vmlinuz-$release" "/boot/initrd.img-$release"
+for dtb in "/usr/lib/linux-image-$release/broadcom"/bcm*.dtb; do
+	[ ! -e "$dtb" ] || set -- "$@" "$dtb"
+done
+if ! put "$@"; then
+	warn "the boot configuration keeps the kernel chosen by raspi-firmware"
+	exit 0
+fi
+if sed -e "s/^kernel=vmlinuz-.*/kernel=vmlinuz-$release/" \
+	-e "s/^initramfs initrd\.img-.*/initramfs initrd.img-$release/" "$cfg" > "$tmp" &&
+	mv "$tmp" "$cfg"; then
+	sync -f "$fw" 2> /dev/null || true
+else
+	rm -f "$tmp"
+	warn "cannot update $cfg"
+fi
+exit 0

@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+case "$1" in
+configure)
+	/usr/sbin/ilp32-kernel-update-boot ||
+		echo "ilp32-kernel: could not update the boot configuration; run ilp32-kernel-update-boot" >&2
+	;;
+triggered)
+	# raspi-firmware was upgraded: its postinst ran z50-raspi-firmware without our hook.
+	/usr/lib/ilp32-kernel/raspi-apply || true
+	;;
+esac
+exit 0
