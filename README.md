@@ -68,6 +68,15 @@ then `resize2fs`) and install `openssh-server` from the console if you want remo
   settings stay as with Debian's kernel; 32-bit Arm (AArch32) programs keep running. The few
   configuration differences from Debian's are listed in [kernel/README.md](kernel/README.md).
 - Security fixes for the kernel come from this repository, not from Debian.
+- **Check which kernel you boot.** Debian's security archive now has a newer kernel (6.12.115) than
+  ours (6.12.114), and boot loaders prefer the highest version. If `linux-image-arm64` is installed,
+  updates, including automatic ones from `unattended-upgrades`, can bring it in, and a later reboot
+  can start Debian's kernel. The system still boots, but ILP32 programs fail with `exec format error`.
+  After a reboot, `uname -r` should end in `-ilp32-arm64`. If it does not, choose our kernel in the
+  GRUB (*Advanced options*) or extlinux menu; on a Raspberry Pi, set the `kernel=` and `initramfs`
+  lines in `/boot/firmware/config.txt` to the `-ilp32-arm64` files. To stop new Debian kernels
+  arriving, `sudo apt remove linux-image-arm64`; you then get no kernel updates from Debian. A package
+  fix that keeps our kernel as the default is in preparation.
 - Secure Boot: the kernel is not signed; turn Secure Boot off.
 - DKMS modules (NVIDIA, ZFS, …): install `linux-headers-ilp32-arm64`; it brings in `gcc-14` and
   `make`, and DKMS rebuilds the modules for the new kernel.
