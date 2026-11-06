@@ -19,7 +19,7 @@
 #   KERNEL_BUILD     build directory (default ~/work/build/debian-ilp32-kernel)
 #   OUT              output directory (default ~/work/debian-ilp32-kernel/out)
 #   JOBS             parallel jobs (default 2)
-#   KDEB_PKGVERSION  package version (default 6.12.114-1+ilp32a64.1)
+#   KDEB_PKGVERSION  package version (default 6.12.115-1+ilp32a64.1)
 #   KLOCALVERSION    release suffix (default -ilp32-arm64: linux-image-<version>-ilp32-arm64)
 #   NODEBUG=1        no debug info, no BTF, no -dbg package
 # Output: OUT/linux-image-*.deb, OUT/linux-headers-*.deb (published), OUT/linux-libc-dev_*.deb and
@@ -32,7 +32,7 @@ WT=${KERNEL_SRC:-$HOME/work/wt/ilp32-6.12.y}
 SRC=${KERNEL_TREE:-$HOME/work/wt/debian-kernel}
 O=${KERNEL_BUILD:-$HOME/work/build/debian-ilp32-kernel}
 OUT=${OUT:-$HOME/work/debian-ilp32-kernel/out}
-export KDEB_PKGVERSION=${KDEB_PKGVERSION:-6.12.114-1+ilp32a64.1}
+export KDEB_PKGVERSION=${KDEB_PKGVERSION:-6.12.115-1+ilp32a64.1}
 LV=${KLOCALVERSION:--ilp32-arm64}
 REV=$(git -C "$WT" rev-parse "${REV:-HEAD}")
 . /etc/os-release
