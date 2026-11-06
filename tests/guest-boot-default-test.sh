@@ -54,7 +54,15 @@ install)
 	deb https://deb.debian.org/debian trixie main non-free-firmware
 	deb https://security.debian.org/debian-security trixie-security main
 	EOF
+	if [ "$BACKPORTS" = 1 ]; then
+		echo 'deb https://deb.debian.org/debian trixie-backports main' >> /etc/apt/sources.list
+		printf 'Package: *\nPin: release a=trixie-backports\nPin-Priority: 500\n' > /etc/apt/preferences.d/backports
+	fi
 	check apt-get update -q
+	if [ "$BACKPORTS" = 1 ]; then
+		# Its kernels need a newer linux-base, which apt does not choose by itself.
+		check apt-get install -y -q --no-install-recommends -t trixie-backports linux-base
+	fi
 	step "G1 without the package, the higher Debian kernel is the default"
 	check dpkg -i "$IMG"
 	check apt-get install -y -q --no-install-recommends "linux-image-$LOW" "linux-image-$HIGH"
@@ -294,7 +302,7 @@ rest)
 	rm -f "$FW/vmlinuz-$LOW" "$FW/initrd.img-$LOW"
 	check apt-get purge -y -q "$IPKG"
 	check nothing_left
-	echo "INFO after removal: $(pi_kernel)"
+	echo "INFO after removal: $(pi_kernel) / $(pi_initrd)"
 	check pi_is "$LOW"
 	check pi_files_match "$LOW"
 	check no_tmp

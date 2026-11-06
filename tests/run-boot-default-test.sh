@@ -14,6 +14,7 @@
 # Usage: run-boot-default-test.sh <efi-base.img> <work dir> <debs dir>
 #   the debs dir has the kernel package and the metapackage under test
 #   LOW, HIGH  Debian kernel releases below and above the ILP32 kernel
+#   BACKPORTS=1  HIGH comes from trixie-backports (once trixie itself is below the ILP32 kernel)
 #   TC  toolchain prefix (default ~/work/ilp32-glibc/toolchain/out)
 set -euo pipefail
 BASE=$(realpath "${1:?usage: run-boot-default-test.sh <efi-base.img> <work dir> <debs dir>}")
@@ -54,8 +55,8 @@ sudo mkdir -p mnt/ilp32-test/debs
 sudo cp "$KIMG" "$META" mnt/ilp32-test/debs/
 sudo install -m 0755 hello-ilp32 mnt/ilp32-test/hello-ilp32
 sudo install -m 0755 "$HERE/guest-boot-default-test.sh" mnt/ilp32-test/guest-boot-default-test.sh
-printf 'ILP32=%s\nLOW=%s\nHIGH=%s\nIMG=/ilp32-test/debs/%s\nMETA=/ilp32-test/debs/%s\n' \
-	"$ILP32" "$LOW" "$HIGH" "$(basename "$KIMG")" "$(basename "$META")" | sudo tee mnt/ilp32-test/versions > /dev/null
+printf 'ILP32=%s\nLOW=%s\nHIGH=%s\nBACKPORTS=%s\nIMG=/ilp32-test/debs/%s\nMETA=/ilp32-test/debs/%s\n' \
+	"$ILP32" "$LOW" "$HIGH" "${BACKPORTS:-0}" "$(basename "$KIMG")" "$(basename "$META")" | sudo tee mnt/ilp32-test/versions > /dev/null
 echo install | sudo tee mnt/ilp32-test/phase > /dev/null
 printf '#!/bin/bash\n./guest-boot-default-test.sh\n' | sudo tee mnt/ilp32-test/test.sh > /dev/null
 sudo chmod 0755 mnt/ilp32-test/test.sh
