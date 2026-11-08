@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: liviyifan <344781483+liviyifan@users.noreply.github.com>
+Date: Sun, 8 Nov 2026 21:46:12 +0800
+Subject: [PATCH] arm64: dts: marvell: espressobin: use a finer SD tuning step
+
+On an ESPRESSObin v5 with the root file system on SD, UHS-I SDR104 reads
+with ADMA sometimes put wrong data in the page cache: runs of pages
+shifted by 8 bytes, starting with the last 8 bytes of an earlier read.
+The card and O_DIRECT reads stay correct and nothing is logged.
+
+With the default tuning step divider of 64, 20 of 70 boots under a
+compile load showed it, on two cards from different makers. The same
+happened with Debian's own 6.12.115 and 7.2.11 kernels. With a divider
+of 128 the tuning selects a different sampling point, and 56 of 56
+boots were clean, at the same read throughput. 50 MHz high speed,
+DDR50, SDR50 and SDR104 with SDMA were clean as well, but slower.
+
+Tested on one ESPRESSObin v5 only; the other variants share this node.
+
+Signed-off-by: liviyifan <344781483+liviyifan@users.noreply.github.com>
+---
+ arch/arm64/boot/dts/marvell/armada-3720-espressobin.dtsi | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/marvell/armada-3720-espressobin.dtsi b/arch/arm64/boot/dts/marvell/armada-3720-espressobin.dtsi
+index fed2dcecb323..93f45dd1b1c3 100644
+--- a/arch/arm64/boot/dts/marvell/armada-3720-espressobin.dtsi
++++ b/arch/arm64/boot/dts/marvell/armada-3720-espressobin.dtsi
+@@ -100,6 +100,12 @@ &sdhci1 {
+ 	cd-gpios = <&gpionb 3 GPIO_ACTIVE_LOW>;
+ 	marvell,pad-type = "sd";
+ 	vqmmc-supply = <&vcc_sd_reg1>;
++	/*
++	 * The default tuning step of 1/64 of the DLL delay picks a sampling
++	 * point at which SDR104 reads with ADMA are silently shifted by 8 bytes
++	 * now and then; 1/128 does not.
++	 */
++	marvell,xenon-phy-tun-step-divider = <128>;
+ 
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&sdio_pins>;

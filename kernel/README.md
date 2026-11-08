@@ -12,13 +12,15 @@ kernel/chroot-run.sh --fresh env JOBS=2 "$PWD/kernel/build-deb.sh"     # release
 Inputs:
 
 - `KERNEL_SRC`: a work tree of `linux-ilp32` `ilp32-6.12.y`, `REV` the commit (default `HEAD`);
-  6.12.115-1+ilp32a64.1 is `8675fc15fb`; 6.12.114-1+ilp32a64.1 and +ilp32a64.2 are `64b6f40074`
+  6.12.115-1+ilp32a64.1 and +ilp32a64.2 are `8675fc15fb`; 6.12.114-1+ilp32a64.1 and +ilp32a64.2 are `64b6f40074`
   (tag `ilp32-6.12.114`, since the branch is rebased on each stable release)
 - `config-debian`: the arm64 kernel configuration of `linux-image-6.12.113+deb13-arm64-unsigned`,
   the same as that of 6.12.115+deb13.1 except for its title line
   (Debian, GPL-2); `build-deb.sh` adds ILP32 (`ARM64_ILP32`, `COMPAT_32BIT_TIME`) and builds binder in
 - `patches/`: Debian's patch for `kernel.perf_event_paranoid=3` (`SECURITY_PERF_EVENTS_RESTRICT`), from
   the Debian `linux` package (GPL-2), refreshed for 6.12.114; it applies unchanged to 6.12.115
+  - and our patch for the ESPRESSObin SD slot (`marvell,xenon-phy-tun-step-divider = <128>`):
+  with the default tuning step, SDR104 reads with ADMA were silently corrupted on that board
 
 Differences of the packaged `/boot/config` from Debian's (`scripts/diffconfig`, 11 lines):
 
