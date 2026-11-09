@@ -12,6 +12,7 @@ kernel/chroot-run.sh --fresh env JOBS=2 "$PWD/kernel/build-deb.sh"     # release
 Inputs:
 
 - `KERNEL_SRC`: a work tree of `linux-ilp32` `ilp32-6.12.y`, `REV` the commit (default `HEAD`);
+  6.12.115-1+ilp32a64.3 is `0f465af64b` (ILP32 tasks get AUDIT_ARCH_AARCH64ILP32);
   6.12.115-1+ilp32a64.1 and +ilp32a64.2 are `8675fc15fb`; 6.12.114-1+ilp32a64.1 and +ilp32a64.2 are `64b6f40074`
   (tag `ilp32-6.12.114`, since the branch is rebased on each stable release)
 - `config-debian`: the arm64 kernel configuration of `linux-image-6.12.113+deb13-arm64-unsigned`,

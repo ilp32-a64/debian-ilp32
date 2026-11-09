@@ -47,6 +47,9 @@ boot)
 		[ -x "$v" ] && check "$v"
 	done
 	if [ "$ILP32" = 1 ]; then
+		for s in /ilp32-test/bin/seccomp-arch-*; do
+			[ -x "$s" ] && check "$s"
+		done
 		check grep -q '^CONFIG_ARM64_ILP32=y' "/boot/config-$REL"
 		/ilp32-test/guest-install-test.sh /ilp32-test/debs /ilp32-test/bin
 	else

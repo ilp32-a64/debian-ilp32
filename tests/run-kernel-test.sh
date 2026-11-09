@@ -10,6 +10,7 @@
 #   EXPECT_RELEASE  expected uname -r (default: from the linux-image package name)
 #   EXPECT_ILP32=0  the kernel under test has no ILP32 (e.g. Debian's own, to check the test itself)
 #   TC  toolchain prefix (default ~/work/ilp32-glibc/toolchain/out)
+#   SECCOMP_ARCH_TEST=0  skip the seccomp arch test; LP64_CC  aarch64 compiler for its LP64 copy
 set -euo pipefail
 WD=$(realpath "${1:?usage: run-kernel-test.sh <work dir> <kernel debs> <runtime debs>}")
 KDEBS=$(realpath "${2:?kernel debs dir}")
@@ -28,6 +29,16 @@ rm -rf kt && mkdir -p kt/bin
 "$TC/bin/$T-gcc" -O2 -fopenmp -o kt/bin/runtime-test "$HERE/runtime-test.c" -lm -latomic
 # static: the check runs before the runtime packages are installed
 "$TC/bin/$T-gcc" -O2 -static -o kt/bin/vdso-check-ilp32 "$HERE/vdso-check.c"
+# seccomp arch test (ILP32 tasks report AUDIT_ARCH_AARCH64ILP32); SECCOMP_ARCH_TEST=0 skips it,
+# for kernels before 6.12.115-1+ilp32a64.3. The LP64 copy needs an aarch64 compiler (LP64_CC).
+if [ "${SECCOMP_ARCH_TEST:-1}" = 1 ]; then
+	"$TC/bin/$T-gcc" -O2 -static -o kt/bin/seccomp-arch-ilp32 "$HERE/seccomp-arch-test.c"
+	if command -v "${LP64_CC:-aarch64-linux-gnu-gcc}" > /dev/null; then
+		"${LP64_CC:-aarch64-linux-gnu-gcc}" -O2 -static -o kt/bin/seccomp-arch-lp64 "$HERE/seccomp-arch-test.c"
+	else
+		echo "no LP64 compiler (LP64_CC): only the ILP32 seccomp arch cases run"
+	fi
+fi
 # AArch32 (static, so that no arm32 libraries are needed in the guest), if a compiler is there
 if command -v arm-linux-gnueabihf-gcc > /dev/null; then
 	arm-linux-gnueabihf-gcc -O2 -static -o kt/bin/vdso-check-aarch32 "$HERE/vdso-check.c"
