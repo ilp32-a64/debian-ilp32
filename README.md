@@ -26,7 +26,7 @@ sudo apt install ilp32-runtime
 
 # 4. reboot into the new kernel
 sudo reboot
-uname -r        # 6.12.114-ilp32-arm64
+uname -r        # 6.12.115-ilp32-arm64
 
 # 5. optional: the compiler, to build ILP32 programs on the machine itself
 sudo apt install gcc-aarch64-linux-gnu-ilp32 g++-aarch64-linux-gnu-ilp32
@@ -49,9 +49,9 @@ C programs and other C++ programs are not affected.
 | Machine | Kernel | Status |
 |---|---|---|
 | UEFI with GRUB (servers, VMs, UEFI boards) | `linux-image-ilp32-arm64` | tested in QEMU |
-| Raspberry Pi 3 Model B+ with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | tested on hardware (see below) |
+| Raspberry Pi 3 Model B+ with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | 6.12.114 tested on hardware; 6.12.115 and its default-boot hook tested in QEMU only |
 | Raspberry Pi 4 with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | should work, untested |
-| U-Boot boards with Debian's `u-boot-menu` (extlinux), e.g. the Marvell CN9130 CRB or the Globalscale ESPRESSObin | `linux-image-ilp32-arm64` | tested on hardware (CN9130 CRB; ESPRESSObin v5, 1 GiB) |
+| U-Boot boards with Debian's `u-boot-menu` (extlinux), e.g. the Marvell CN9130 CRB or the Globalscale ESPRESSObin | `linux-image-ilp32-arm64` | tested on hardware (CN9130 CRB with 6.12.114; ESPRESSObin v5, 1 GiB, with 6.12.115, including the default boot entry) |
 | Boards that need a vendor kernel | the vendor kernel with the [ILP32 patches](https://github.com/ilp32-a64/linux-ilp32) | install `ilp32-runtime` only |
 
 Raspberry Pi: Debian 13's images are linked on the front page of [raspi.debian.net](https://raspi.debian.net/)
@@ -62,27 +62,40 @@ then `resize2fs`) and install `openssh-server` from the console if you want remo
 
 ### About the kernel
 
-- It is [linux-ilp32](https://github.com/ilp32-a64/linux-ilp32) `ilp32-6.12.y` (6.12.114: commit `64b6f40074`; 6.12 LTS, the same
-  series as Debian 13), built with Debian 13's configuration (6.12.113) and compiler, plus the
+- It is [linux-ilp32](https://github.com/ilp32-a64/linux-ilp32) `ilp32-6.12.y` (6.12.115: commit `0f465af64b`; 6.12 LTS, the same
+  series as Debian 13), built with Debian 13's configuration (6.12.113, the same as 6.12.115's) and compiler, plus the
   ILP32 ABI and Debian's `perf_event_paranoid` restriction. Drivers, firmware use and system
   settings stay as with Debian's kernel; 32-bit Arm (AArch32) programs keep running. The few
   configuration differences from Debian's are listed in [kernel/README.md](kernel/README.md).
 - Security fixes for the kernel come from this repository, not from Debian.
-- **Check which kernel you boot.** Debian's security archive now has a newer kernel (6.12.115) than
-  ours (6.12.114), and boot loaders prefer the highest version. If `linux-image-arm64` is installed,
-  updates, including automatic ones from `unattended-upgrades`, can bring it in, and a later reboot
-  can start Debian's kernel. The system still boots, but ILP32 programs fail with `exec format error`.
-  After a reboot, `uname -r` should end in `-ilp32-arm64`. If it does not, choose our kernel in the
-  GRUB (*Advanced options*) or extlinux menu; on a Raspberry Pi, set the `kernel=` and `initramfs`
-  lines in `/boot/firmware/config.txt` to the `-ilp32-arm64` files. To stop new Debian kernels
-  arriving, `sudo apt remove linux-image-arm64`; you then get no kernel updates from Debian. A package
-  fix that keeps our kernel as the default is in preparation.
+- **Default boot entry.** Boot loaders normally boot the kernel with the highest version, so a newer
+  Debian kernel (for example from `trixie-security`, also installed by `unattended-upgrades`) would
+  be booted, and ILP32 programs would then fail with `exec format error`. `linux-image-ilp32-arm64`
+  keeps the newest ILP32 kernel as the default instead: for GRUB (`/etc/default/grub.d/ilp32-kernel.cfg`),
+  for extlinux via `u-boot-menu`, and for the Raspberry Pi's `config.txt` (after `raspi-firmware`).
+  Debian's kernel stays installed and in the boot menu. To turn this off, set
+  `ILP32_KERNEL_DEFAULT=no` in `/etc/default/ilp32-kernel` and run `sudo ilp32-kernel-update-boot`.
+  With it on, the machine does not boot Debian's kernel updates, including security updates, until
+  a newer ILP32 kernel package follows them. Details: [meta/boot-default/README.md](meta/boot-default/README.md).
+  `unattended-upgrades` installs only Debian's packages, so updates from this repository need
+  `sudo apt upgrade`.
+- **ESPRESSObin (Armada 3720) SD cards at SDR104.** With the default tuning step, SD reads at SDR104
+  sometimes put wrong data in the page cache (the card's data stays correct; nothing is logged), on
+  two cards from different makers, also with Debian's own kernels. Our kernel's ESPRESSObin device
+  trees set `marvell,xenon-phy-tun-step-divider = <128>`, which was clean in 56 of 56 reboots at the
+  same speed (Debian's kernels and our 6.12.114 do not have it). Tested on one ESPRESSObin v5 only.
+- **seccomp.** From 6.12.115-1+ilp32a64.3, ILP32 programs report their own audit architecture,
+  `AUDIT_ARCH_AARCH64ILP32` (`0xd00000b7`); earlier kernels reported `AUDIT_ARCH_AARCH64`, so a filter
+  written for 64-bit Arm could be bypassed by an ILP32 program through its time64 system calls.
+  Debian's systemd and libseccomp do not know the new architecture: in a unit with
+  `SystemCallArchitectures=native`, ILP32 programs are refused (`SIGSYS`; remove that line to run one),
+  and `SystemCallFilter=` alone does not apply to them, as for any architecture systemd does not know.
 - Secure Boot: the kernel is not signed; turn Secure Boot off.
 - DKMS modules (NVIDIA, ZFS, …): install `linux-headers-ilp32-arm64`; it brings in `gcc-14` and
   `make`, and DKMS rebuilds the modules for the new kernel.
-- Back to Debian's kernel: Debian's kernel stays installed; choose it under *Advanced options* in
-  the GRUB menu, or remove ours with
-  `sudo apt remove linux-image-ilp32-arm64 linux-image-6.12.114-ilp32-arm64`.
+- Back to Debian's kernel: Debian's kernel stays installed; choose it in the GRUB (*Advanced options*)
+  or extlinux menu, turn the default off as above, or remove ours with
+  `sudo apt remove linux-image-ilp32-arm64 linux-image-6.12.115-ilp32-arm64` (and older ones).
 
 ## Packages
 
@@ -94,8 +107,8 @@ All are `Architecture: arm64`, except the keyring (`all`):
 | `libc6-ilp32` | 2.41-12+deb13u4+ilp32a64.2 | Debian's glibc 2.41 with the ILP32 port ([glibc-ilp32](https://github.com/ilp32-a64/glibc-ilp32)) |
 | `libstdc++6-ilp32`, `libgomp1-ilp32` | 14.2.0-19+ilp32a64.2 | runtime libraries of Debian's `gcc-14` (with futexes) |
 | `libgcc-s1-ilp32`, `libatomic1-ilp32` | 14.2.0-19+ilp32a64.1 | runtime libraries of Debian's `gcc-14` |
-| `linux-image-ilp32-arm64`, `linux-headers-ilp32-arm64` | 6.12.114+ilp32a64.2 | metapackages: the latest kernel and headers |
-| `linux-image-6.12.114-ilp32-arm64`, `linux-headers-6.12.114-ilp32-arm64` | 6.12.114-1+ilp32a64.2 | the kernel and its headers |
+| `linux-image-ilp32-arm64`, `linux-headers-ilp32-arm64` | 6.12.115+ilp32a64.3 | metapackages: the latest kernel and headers (the image one also keeps it the default boot entry) |
+| `linux-image-6.12.115-ilp32-arm64`, `linux-headers-6.12.115-ilp32-arm64` | 6.12.115-1+ilp32a64.3 | the kernel and its headers |
 | `ilp32-a64-archive-keyring` | 2026.10.24 | the repository key and apt source |
 | `gcc-aarch64-linux-gnu-ilp32`, `g++-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.4 | metapackages: the compiler commands without version suffix |
 | `gcc-14-aarch64-linux-gnu-ilp32`, `g++-14-aarch64-linux-gnu-ilp32` | 14.2.0-19+ilp32a64.4 | Debian's `gcc-14` C and C++ compilers for ILP32, running on arm64 |
