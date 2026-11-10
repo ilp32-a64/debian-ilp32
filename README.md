@@ -49,7 +49,7 @@ C programs and other C++ programs are not affected.
 | Machine | Kernel | Status |
 |---|---|---|
 | UEFI with GRUB (servers, VMs, UEFI boards) | `linux-image-ilp32-arm64` | tested in QEMU |
-| Raspberry Pi 3 Model B+ with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | 6.12.114 tested on hardware; 6.12.115 and its default-boot hook tested in QEMU only |
+| Raspberry Pi 3 Model B+ with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | tested on hardware (6.12.115, including the default boot entry) |
 | Raspberry Pi 4 with Debian's [Raspberry Pi image](https://raspi.debian.net/) (`raspi-firmware`) | `linux-image-ilp32-arm64` | should work, untested |
 | U-Boot boards with Debian's `u-boot-menu` (extlinux), e.g. the Marvell CN9130 CRB or the Globalscale ESPRESSObin | `linux-image-ilp32-arm64` | tested on hardware (CN9130 CRB with 6.12.114; ESPRESSObin v5, 1 GiB, with 6.12.115, including the default boot entry) |
 | Boards that need a vendor kernel | the vendor kernel with the [ILP32 patches](https://github.com/ilp32-a64/linux-ilp32) | install `ilp32-runtime` only |
